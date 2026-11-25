@@ -12,6 +12,17 @@ const url=process.argv[2]||'http://127.0.0.1:8795',out=process.argv[3];
     ok(await p.isVisible('#screen.on'),`${vp.w}: 시작 화면`);
     await p.click('#screen .btn.pri');await p.waitForTimeout(400);
     ok(await p.evaluate(()=>G&&G.state==='field'&&Z.length>0),`${vp.w}: 게임 시작·좀비 생성`);
+    // 기본 화면·재난문자·비·노선도
+    await p.waitForTimeout(900);
+    const look=await p.evaluate(()=>{
+      const r={noir:VLOOK==='noir',sms:$('#sms').classList.contains('on')&&$('#sms').textContent.includes('행정안전부')};
+      const sr=$('#sms').getBoundingClientRect();r.smsFit=sr.left>=0&&sr.right<=innerWidth+1;
+      smsNext();smsNext();smsNext();smsNext();
+      Z=[];spawnZ(P.x+160,P.y);const z=Z[0];z.fx=1;z.fy=0;G.rain=true;noise(P.x,P.y,200,0);r.rainQuiet=z.state==='idle';
+      G.rain=false;noise(P.x,P.y,200,0);r.dryHear=z.state==='inv';Z=[];
+      openMap();r.line=$('#modal .ln .st.cur')?.textContent.includes('강남역');closeMap();
+      return r});
+    ok(Object.values(look).every(Boolean),`${vp.w}: 무채색 기본·재난문자·비·노선도 ${JSON.stringify(look)}`);
     // 지도 연결성: 거점에서 모든 뒤질 것까지 갈 수 있다
     ok(await p.evaluate(()=>{const D=bfs((HOME_TILE.x+.5)*T,(HOME_TILE.y+.5)*T);return conts.every(c=>{const tx=c.x/T|0,ty=c.y/T|0;if(c.car){for(const [i,j] of [[-1,0],[1,0],[0,-1],[0,1],[2,0],[0,2],[-1,1],[1,-1]])if(D[(c.car.y+j)*MW+c.car.x+i]>=0)return true;return false}return D[ty*MW+tx]>=0})}),`${vp.w}: 모든 뒤질 것에 갈 수 있다`);
     // 걷기

@@ -31,6 +31,13 @@ button{font:inherit;color:inherit;cursor:pointer}
 .toast.gold{color:#ffe19a}
 .toast.green{color:#c6efb8}
 @keyframes tf{0%{opacity:0;transform:translateY(-6px)}8%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0}}
+#sms{position:fixed;left:50%;top:calc(6px + env(safe-area-inset-top));transform:translate(-50%,-140%);width:min(440px,94vw);z-index:30;background:rgba(22,24,28,.97);border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.6);overflow:hidden;transition:transform .35s cubic-bezier(.2,.9,.3,1.2);pointer-events:auto}
+#sms.on{transform:translate(-50%,0)}
+#sms .sh{display:flex;align-items:center;gap:6px;padding:6px 12px;font-size:12px;font-weight:700;color:#fff;background:#b3261e}
+#sms.safe .sh{background:#a87a0b}
+#sms .sh small{margin-left:auto;font-weight:400;opacity:.8}
+#sms .sb{padding:8px 12px 10px;font-size:13px;line-height:1.5;color:#eee}
+#sms .sb b{color:#ffcf8a}
 #prompt{position:fixed;left:50%;bottom:calc(150px + env(safe-area-inset-bottom));transform:translateX(-50%);background:rgba(0,0,0,.7);border:1px solid rgba(230,185,76,.5);padding:6px 14px;border-radius:16px;font-size:13px;pointer-events:none;z-index:5;white-space:nowrap;display:none}
 body:not(.touch) #prompt{bottom:28px}
 #joyzone,#btns{display:none}
@@ -67,6 +74,12 @@ body.touch #btns{display:grid;position:fixed;right:14px;bottom:calc(18px + env(s
 .stat{display:grid;grid-template-columns:52px 1fr 34px;gap:6px;align-items:center;margin:4px 0}
 .stat .bar{height:9px}
 .no{color:var(--red)}
+.ln{display:flex;justify-content:space-between;position:relative;padding:10px 14px 2px}
+.ln:before{content:'';position:absolute;left:44px;right:44px;top:17px;height:4px;background:#d8691c;border-radius:2px}
+.ln .st{position:relative;text-align:center;font-size:11px;width:68px;color:#888}
+.ln .st i{display:block;margin:0 auto 3px;width:12px;height:12px;border-radius:50%;border:3px solid #d8691c;background:#14161a}
+.ln .st.v{color:#ccc}.ln .st.v i{background:#d8691c}
+.ln .st.cur{color:#fff;font-weight:700}.ln .st.cur i{background:#fff;box-shadow:0 0 0 4px rgba(255,255,255,.25)}
 .big{max-width:420px;text-align:center;padding:22px 20px}
 .big h1{margin:0 0 4px;font-size:34px;letter-spacing:.06em;font-family:"Nanum Myeongjo","Batang",serif}
 .big p{color:var(--dim);line-height:1.6;font-size:13px;margin:8px 0}
@@ -91,6 +104,7 @@ body:not(.ingame) #hud,body:not(.ingame) #btns,body:not(.ingame) #joyzone,body:n
   <div id="quick"></div>
 </div>
 <div id="toasts"></div>
+<div id="sms"></div>
 <div id="prompt"></div>
 <div id="joyzone"><div id="joy"><div id="knob"></div></div></div>
 <div id="btns">
@@ -727,8 +741,9 @@ function travel(l){
   noises=[];thrown=[];alarms=[];flowD=null;flowT=0;NPCS=[];
   if(ALLY){ALLY.x=P.x;ALLY.y=P.y}
   toast(ZONES[id].n,'gold');
-  if(id==='subway'&&!G.seenSub){G.seenSub=1;toast('북쪽 선로 끝을 따라가면 한강이 나온다','')}
-  if(id==='namsan'&&!G.seenNam){G.seenNam=1;toast('정상의 송신소에서 구조 신호를 보낼 수 있다','')}
+  if(id==='subway'&&!G.seenSub){G.seenSub=1;sms('safe','서울교통공사','전 노선 운행 중단. 북쪽 선로는 한강(한남대교) 방면으로 이어집니다. 선로 진입 시 주의.')}
+  if(id==='bridge'&&!G.seenBri){G.seenBri=1;sms('urgent','서울시','한남대교 중앙 구간 붕괴. 통행 시 오른쪽 난간 점검로를 이용하십시오.')}
+  if(id==='namsan'&&!G.seenNam){G.seenNam=1;sms('safe','국방부','남산 송신소 비상 송신 장비 가동 가능. 생존자는 정상으로 집결하십시오.')}
   saveGame();
 }
 /* 마지막: 남산 송신소 */
@@ -749,7 +764,7 @@ function finalAsk(l){
 function finalStart(){
   const need=finalNeed();for(const k in need)take(P.bag,k,need[k]);
   const l=links.find(k=>k.id==='tx');G.final={p:0,sp:1,x:(l.x+.5)*T,y:(l.y+.5)*T};
-  talkEnd();toast('📡 송신 시작! 송신소 곁을 90초 지켜라','red');noise(G.final.x,G.final.y,900,1,'255,140,90');
+  talkEnd();toast('📡 송신 시작! 송신소 곁을 90초 지켜라','red');sms('urgent','국방부','남산 비상 신호 수신. 구조 헬기 준비 중. 송신을 유지하십시오. 감염자 집결 중.');noise(G.final.x,G.final.y,900,1,'255,140,90');
 }
 function finalTick(dt){
   const f=G.final;if(!f||G.zone!=='namsan')return;
@@ -796,8 +811,9 @@ function newGame(){
   Z=[];noises=[];fx=[];thrown=[];alarms=[];
   R=Math.random;
   spawnDay();
-  closeScreen();document.body.classList.add('ingame');
+  closeScreen();document.body.classList.add('ingame');G.rain=false;
   toast('1일차 아침. 해가 지기 전에 청운 오피스텔로 돌아오자. [M] 지도','gold');
+  SMSQ.length=0;setTimeout(()=>{if(G&&G.day===1&&G.t<5)morningSms()},600);
 }
 function spawnDay(){
   Z=[];
@@ -857,6 +873,7 @@ function fieldDir(z,D,gx,gy){
 
 /* ───────── 소리 ───────── */
 function noise(x,y,r,show,col){
+  if(raining())r*=.7;
   if(show)noises.push({x,y,r,t:0,col:col||'255,255,255'});
   let tgt=null;
   for(const z of Z){
@@ -1016,7 +1033,7 @@ function update(dt){
     move(P,ux*spd*dt,uy*spd*dt);P.ph+=dt*spd*.12;
     P.stepT-=dt;if(P.stepT<=0){P.stepT=run?.35:.6;noise(P.x,P.y,run?150:42,run?1:0,'255,255,255')}
   }
-  P.food=Math.max(0,P.food-.06*dt);P.water=Math.max(0,P.water-(run?.16:.09)*dt);
+  P.food=Math.max(0,P.food-.06*dt);P.water=Math.max(0,P.water-(run?.16:.09)*(raining()?.5:1)*dt);
   if(P.food<=0||P.water<=0)P.hp-=.6*dt;
   P.atkCd-=dt;P.hurt-=dt;P.swing-=dt;
   // 길찾기
@@ -1052,7 +1069,7 @@ function update(dt){
   // 밤 증원
   if(night&&!G.area){G.spT-=dt;if(G.spT<=0){G.spT=4.5;if(Z.length<44+G.day*9)spawnNear()}}
   if(G.t>NIGHT&&!G.warned){G.warned=1;toast('해가 졌다. 어둠 속에서 좀비가 늘어난다','red')}
-  if(G.t>NIGHT-30&&!G.warn0){G.warn0=1;toast('곧 해가 진다. 거점으로 돌아가자','gold')}
+  if(G.t>NIGHT-30&&!G.warn0){G.warn0=1;sms('urgent','강남구청','일몰이 임박했습니다. 야간에는 감염자 활동이 크게 늘어납니다. 즉시 실내로 대피하십시오.')}
   shake=Math.max(0,shake-dt*30);
   G.saveT=(G.saveT||15)-dt;if(G.saveT<=0)saveGame();
   if(P.hp<=0)gameOver('hp');else if(P.inf>=100)gameOver('inf');
@@ -1071,7 +1088,7 @@ function updateZ(z,dt,night){
   const dx=P.x-z.x,dy=P.y-z.y,d=hyp(dx,dy);
   if(z.senseT<=0){
     z.senseT=.2+R()*.1;
-    const sight=t.sight*(night?.75:1)*(P.run?1.1:1);
+    const sight=t.sight*(night?.75:1)*(P.run?1.1:1)*(raining()?.85:1);
     let sees=false;
     if(d<sight){
       const da=Math.abs(angdiff(Math.atan2(z.fy,z.fx),Math.atan2(dy,dx)));
@@ -1113,7 +1130,7 @@ function updateZ(z,dt,night){
 }
 
 /* ───────── 거점 ───────── */
-function pause(){G.state='pause';showScreen(`<div class="win big"><h1>일시정지</h1><p>${G.day}일차 · ${clockText()}</p><div class="keys">이동 WASD·방향키 · 달리기 Shift · 지도 M<br>공격 Space·클릭 · 뒤지기/거점 E<br>폭죽 F·우클릭 · 아이템 1~5</div><button class="btn pri" onclick="resume()">계속하기</button><button class="btn" onclick="saveGame();titleScreen()">저장하고 처음 화면으로</button></div>`)}
+function pause(){G.state='pause';showScreen(`<div class="win big"><h1>일시정지</h1><p>${G.day}일차 · ${clockText()}</p><div class="keys">이동 WASD·방향키 · 달리기 Shift · 지도 M<br>공격 Space·클릭 · 뒤지기/거점 E<br>폭죽 F·우클릭 · 아이템 1~5</div><button class="btn pri" onclick="resume()">계속하기</button><button class="btn" onclick="toggleLook()">화면: ${VLOOK==='noir'?'무채색+네온 (바꾸기)':'기본 (바꾸기)'}</button><button class="btn" onclick="saveGame();titleScreen()">저장하고 처음 화면으로</button></div>`)}
 function resume(){G.state='field';closeScreen();last=performance.now()}
 function openBase(){
   G.state='base';P.search=null;ALLY=null;
@@ -1207,10 +1224,10 @@ function sleep(){
       P.hp-=15;log.push(`<span class="no">⚠ 밤 습격! 바리케이드가 뚫려 식량·물 ${lost}개를 잃고 다쳤다 (Lv${s} 필요)</span>`);
     }
   }
-  if(G.fac.rain){addTo(G.stash,'water',G.fac.rain);log.push(`빗물 받이: 생수 +${G.fac.rain}`)}
+  if(G.fac.rain){const n=G.fac.rain*(G.rain?2:1);addTo(G.stash,'water',n);log.push(`빗물 받이: 생수 +${n}${G.rain?' (비 온 날 두 배)':''}`)}
   if(G.fac.garden){addTo(G.stash,'veg',G.fac.garden);log.push(`옥상 텃밭: 채소 +${G.fac.garden}`)}
   crewMorning(fed,log);
-  G.day++;G.t=0;G.warned=G.warn0=0;G.spT=0;
+  G.day++;G.t=0;G.warned=G.warn0=0;G.spT=0;G.rain=R()<.3;
   for(const c of conts)if(c.empty&&R()<.3){c.empty=false;c.loot=null}
   for(const id in ZC)if(id!==G.zone)for(const c of ZC[id].conts)if(c.empty&&R()<.3){c.empty=false;c.loot=null}
   for(const k in G.floors){const f=G.floors[k];f.Z=null;if(f.conts)for(const c of f.conts)if(c.empty&&R()<.3){c.empty=false;c.loot=null}}
@@ -1221,7 +1238,7 @@ function sleep(){
   if(P.inf>=100){gameOver('inf');return}
   saveGame();
   const m=$('#modal');
-  m.innerHTML=`<div class="win"><div class="whead"><div><h2>${day}일차 밤이 지났다</h2><small>${G.day}일차 아침 06:00</small></div></div><div class="wbody"><div class="list">${[`배고픔 −${hunger} · 갈증 −25 · 체력 +${heal}`,...log].map(s=>`<div class="it">${s}</div>`).join('')}</div></div><div class="wfoot"><button class="pri" onclick="renderBase()">확인</button></div></div>`;
+  m.innerHTML=`<div class="win"><div class="whead"><div><h2>${day}일차 밤이 지났다</h2><small>${G.day}일차 아침 06:00</small></div></div><div class="wbody"><div class="list">${[`배고픔 −${hunger} · 갈증 −25 · 체력 +${heal}`,...log].map(s=>`<div class="it">${s}</div>`).join('')}</div></div><div class="wfoot"><button class="pri" onclick="renderBase();morningSms()">확인</button></div></div>`;
   m.classList.add('on');
 }
 
@@ -1245,7 +1262,7 @@ function saveGame(){
     const zones=Object.assign({},G.zoneSave||{});
     for(const id in ZONES){const L=zoneLists(id);if(L)zones[id]={conts:L.conts.map(c=>[c.empty?1:0,c.loot]),cars:L.cars.map(c=>c.fired?1:0)}}
     const d={v:2,at:Date.now(),
-      G:{day:G.day,t:G.t,seed:G.seed,stash:G.stash,fac:G.fac,kills:G.kills,warned:G.warned||0,warn0:G.warn0||0,surv:G.surv,follow:G.follow||null,zone:G.zone,seenSub:G.seenSub||0,seenNam:G.seenNam||0},
+      G:{day:G.day,t:G.t,seed:G.seed,stash:G.stash,fac:G.fac,kills:G.kills,warned:G.warned||0,warn0:G.warn0||0,rain:!!G.rain,seenBri:G.seenBri||0,surv:G.surv,follow:G.follow||null,zone:G.zone,seenSub:G.seenSub||0,seenNam:G.seenNam||0},
       P:{x:P.x,y:P.y,fx:P.fx,fy:P.fy,hp:P.hp,food:P.food,water:P.water,inf:P.inf,weapon:{id:P.weapon.id,dur:P.weapon.id==='fist'?0:P.weapon.dur},bag:P.bag},
       zones,floors,area:G.area?{bx:G.area.b.x,by:G.area.b.y,f:G.area.f}:null,base:G.state==='base'};
     localStorage.setItem(SAVE_KEY,JSON.stringify(d));G.saveT=15;return true;
@@ -1284,6 +1301,25 @@ function gameOver(k){
   showScreen(`<div class="win big"><h1>${k==='inf'?'감염':'쓰러졌다'}</h1><p>${k==='inf'?'열이 오르고 시야가 흐려졌다. 더는 사람이 아니다.':'아스팔트 위에 쓰러졌다. 멀리서 발소리가 다가온다.'}</p><p>${G.day}일차 · 처치 ${G.kills}</p><button class="btn pri" onclick="newGame()">다시 시작</button><button class="btn" onclick="titleScreen()">처음 화면으로</button></div>`);
 }
 
+/* ───────── 재난문자 ─────────
+   sms(kind,from,text): kind 'urgent'(긴급재난문자, 빨강·진동) | 'safe'(안전안내문자, 노랑). 차례로 한 통씩 5초. 누르면 넘긴다. */
+const SMSQ=[];let smsT=null;
+function sms(kind,from,text){SMSQ.push({kind,from,text});if(!smsT)smsNext()}
+function smsNext(){
+  const el=$('#sms'),m=SMSQ.shift();clearTimeout(smsT);
+  if(!m){el.classList.remove('on');smsT=null;return}
+  el.className=m.kind==='safe'?'safe':'';el.innerHTML=`<div class="sh">${m.kind==='safe'?'⚠ 안전안내문자':'🚨 긴급재난문자'}<small>${G?`${G.day}일차 ${clockText()}`:''}</small></div><div class="sb">[${m.from}] ${m.text}</div>`;
+  requestAnimationFrame(()=>el.classList.add('on'));
+  if(m.kind!=='safe'&&navigator.vibrate)try{navigator.vibrate([180,90,180])}catch(e){}
+  smsT=setTimeout(()=>{el.classList.remove('on');smsT=setTimeout(smsNext,400)},5200);
+}
+$('#sms').addEventListener('pointerdown',e=>{e.preventDefault();smsNext()});
+function morningSms(){
+  sms('safe','행정안전부',`${G.day}일차. 강남 일대 감염자 약 <b>${Z.length}명</b> 활동 추정. 외출을 자제하십시오.`);
+  if(G.rain)sms('safe','기상청','서울 종일 비. 빗소리에 발소리가 묻히고, 빗물을 받아 마실 수 있습니다.');
+  if(G.day%3===0)sms('urgent','강남구청','오늘 밤 감염자 무리 이동 예상. 거점 출입구를 막으십시오.');
+  const id=SURV_ORDER[G.day-1];if(id&&G.surv[id].st==='lost'){const b=survBuilding(G.surv[id]);if(b)sms('safe','실종자 찾기',`「${b.name}」 ${G.surv[id].f}층 부근에서 구조 요청 신호가 잡혔습니다.`)}
+}
 /* ───────── 토스트·HUD ───────── */
 function toast(msg,cls='',key){
   if(key){const n=performance.now();if(toastCD[key]&&n-toastCD[key]<2500)return;toastCD[key]=n}
@@ -1296,7 +1332,7 @@ let hudT=0;
 function hud(){
   const set=(id,v)=>{$('#b'+id).style.width=clamp(v,0,100)+'%';$('#n'+id).textContent=v|0};
   set('Hp',P.hp);set('Food',P.food);set('Water',P.water);set('Inf',P.inf);
-  const night=G.t>NIGHT;const c=$('#clock');c.textContent=`${G.day}일차 ${night?'🌙':'☀'} ${clockText()}`;c.classList.toggle('night',night);
+  const night=G.t>NIGHT;const c=$('#clock');c.textContent=`${G.day}일차 ${G.rain?'☔':night?'🌙':'☀'} ${clockText()}`;c.classList.toggle('night',night);
   const w=WEAP[P.weapon.id];$('#wpn').textContent=`${w.n} ${P.weapon.id==='fist'?'':P.weapon.dur+'/'+w.dur}`;
   const bh=(G.area?`<div style="color:#ffd76a">📍 ${G.area.b.name} ${G.area.f}층</div>`:'')+`가방 ${bagCount()}/${bagCap()}`;const be=$('#bagn');if(be._h!==bh){be.innerHTML=bh;be._h=bh}
   const q=QUICK.map(([k,ic,n],i)=>{const id=k==='food'?bestFood(P.bag):k;const cnt=k==='food'?(P.bag.can||0)+(P.bag.ramen||0)+(P.bag.veg||0):(P.bag[k]||0);return `<button data-q="${i}" ${cnt?'':'disabled'}>${ic}${n}<em>${cnt}</em></button>`}).join('');
@@ -1406,12 +1442,14 @@ function drawObj(k,o){if(k===0)drawBuilding(o);else if(k===1)drawCar(o);else if(
    1차로 땅·건물·차·나무를 그린 뒤 화면 전체 채도를 빼고, 2차로 간판·피·아이템 반짝임·사람/좀비만 원래 색으로 다시 그린다.
    밤에는 살아 있는 간판이 어둠을 뚫고 빛나며 바닥에 번진다(NEON). 일부 간판은 꺼져 있거나 깜박인다. */
 const QS=new URLSearchParams(location.search);
-let VLOOK=QS.get('look')||'basic',RAIN=QS.get('rain')==='1',NEON=[];
+let VLOOK=QS.get('look')||(()=>{try{return localStorage.getItem('seoul-survivor-look')}catch(e){return null}})()||'noir',RAIN=QS.get('rain')==='1',NEON=[];
+function toggleLook(){VLOOK=VLOOK==='noir'?'basic':'noir';try{localStorage.setItem('seoul-survivor-look',VLOOK)}catch(e){}pause()}
+const raining=()=>RAIN||!!(G&&G.rain&&!G.area&&!ZONES[G.zone].dark);
 const rgba=(hex,a)=>{const n=parseInt(hex.slice(1),16);return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`};
 function noirPass(vx0,vy0,vx1,vy1,late){
   ctx.save();ctx.setTransform(1,0,0,1,0,0);
   ctx.globalCompositeOperation='saturation';ctx.fillStyle='rgba(128,128,128,.85)';ctx.fillRect(0,0,cv.width,cv.height);
-  ctx.globalCompositeOperation='multiply';ctx.fillStyle='rgba(196,190,178,.6)';ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.globalCompositeOperation='multiply';ctx.fillStyle='rgba(196,190,178,.45)';ctx.fillRect(0,0,cv.width,cv.height);
   ctx.restore();ctx.globalCompositeOperation='source-over';
   for(const d of decals){if(d.x<vx0||d.x>vx1||d.y<vy0||d.y>vy1)continue;ctx.fillStyle='rgba(110,8,6,.55)';ctx.beginPath();ctx.ellipse(d.x,d.y,d.r,d.r*.6,d.a,0,7);ctx.fill()}
   NEON=[];const nk=clamp((G.t-NIGHT+25)/30,0,1),now=performance.now();
@@ -1435,12 +1473,12 @@ function noirNightGlow(nk){
   ctx.globalCompositeOperation='lighter';
   for(const n of NEON){const q=toScreen(n.x,n.y),r=Math.max(80,n.w*.8)*zoom;
     let gr=ctx.createRadialGradient(q.x,q.y,2,q.x,q.y,r);gr.addColorStop(0,rgba(n.c,.32*nk));gr.addColorStop(1,rgba(n.c,0));ctx.fillStyle=gr;ctx.beginPath();ctx.arc(q.x,q.y,r,0,7);ctx.fill();
-    const ry=q.y+46*zoom,rw=n.w*.5*zoom;gr=ctx.createRadialGradient(q.x,ry,2,q.x,ry,rw);gr.addColorStop(0,rgba(n.c,(RAIN?.34:.16)*nk));gr.addColorStop(1,rgba(n.c,0));ctx.fillStyle=gr;ctx.save();ctx.translate(q.x,ry);ctx.scale(1,.35);ctx.translate(-q.x,-ry);ctx.beginPath();ctx.arc(q.x,ry,rw,0,7);ctx.fill();ctx.restore();
+    const ry=q.y+46*zoom,rw=n.w*.5*zoom;gr=ctx.createRadialGradient(q.x,ry,2,q.x,ry,rw);gr.addColorStop(0,rgba(n.c,(raining()?.34:.16)*nk));gr.addColorStop(1,rgba(n.c,0));ctx.fillStyle=gr;ctx.save();ctx.translate(q.x,ry);ctx.scale(1,.35);ctx.translate(-q.x,-ry);ctx.beginPath();ctx.arc(q.x,ry,rw,0,7);ctx.fill();ctx.restore();
   }
   ctx.globalCompositeOperation='source-over';
 }
 function drawRain(){
-  if(!RAIN)return;const t=performance.now()/1000;ctx.strokeStyle='rgba(185,205,225,.28)';ctx.lineWidth=1;ctx.beginPath();
+  if(!raining())return;const t=performance.now()/1000;ctx.strokeStyle='rgba(185,205,225,.28)';ctx.lineWidth=1;ctx.beginPath();
   for(let i=0;i<170;i++){const h=hash(i,7),x=((h*W*1.3+t*90)%(W*1.3))-W*.15,y=((hash(i,3)*H+t*(520+h*200))%(H+40))-20;ctx.moveTo(x,y);ctx.lineTo(x-4,y+16)}
   ctx.stroke();ctx.fillStyle='rgba(20,30,40,.12)';ctx.fillRect(0,0,W,H);
 }
@@ -1536,9 +1574,11 @@ function drawExit(e){
 function openMap(){
   if(!G||G.state!=='field')return;G.state='map';
   const PX=G.area?G.area.b.door.x+.5:P.x/T,PY=G.area?G.area.b.door.y+.5:P.y/T;
-  const s=Math.max(2,Math.min((innerWidth-48)/MW,(innerHeight-120)/MH));
+  const s=Math.max(2,Math.min((innerWidth-48)/MW,(innerHeight-175)/MH));
+  const seen=new Set([...Object.keys(ZC),...Object.keys(G.zoneSave||{}),G.zone]);
+  const line=`<div class="ln">${['gangnam','subway','bridge','namsan'].map(id=>`<div class="st ${id===G.zone?'cur':seen.has(id)?'v':''}"><i></i>${seen.has(id)?ZONES[id].n.replace('강남역 지하상가·선로','지하·선로').replace('강남역 일대','강남역'):'???'}${id==='gangnam'?' ★':''}</div>`).join('')}</div>`;
   const m=$('#modal');
-  m.innerHTML=`<div class="win" style="width:auto"><div class="whead"><div><h2>${ZONES[G.zone].n}</h2><small>${G.zone==='gangnam'?'★ 거점 · ● 나 · ? 생존자 신호 · ▼ 지하 입구':'● 나 · ▲▼ 다른 구역으로 · 📡 송신소'}</small></div><button class="btn" style="flex:0 0 auto;padding:6px 12px" onclick="closeMap()">닫기</button></div><div style="padding:8px;display:flex;justify-content:center"><canvas id="mapc" width="${MW*s*DPR|0}" height="${MH*s*DPR|0}" style="width:${MW*s|0}px;height:${MH*s|0}px;position:static;display:block;border-radius:6px"></canvas></div></div>`;
+  m.innerHTML=`<div class="win" style="width:auto"><div class="whead"><div><h2>${ZONES[G.zone].n}</h2><small>${G.zone==='gangnam'?'★ 거점 · ● 나 · ? 생존자 신호 · ▼ 지하 입구':'● 나 · ▲▼ 다른 구역으로 · 📡 송신소'}</small></div><button class="btn" style="flex:0 0 auto;padding:6px 12px" onclick="closeMap()">닫기</button></div>${line}<div style="padding:8px;display:flex;justify-content:center"><canvas id="mapc" width="${MW*s*DPR|0}" height="${MH*s*DPR|0}" style="width:${MW*s|0}px;height:${MH*s|0}px;position:static;display:block;border-radius:6px"></canvas></div></div>`;
   m.classList.add('on');
   const c=$('#mapc').getContext('2d');c.scale(DPR*s,DPR*s);
   const COL=['#3a3d42','#57544d','#3e4934','#4a4640','#6a3532','#5b5852','#24211e','#08080a','#5b5852','#5b5852','#5b5852','#1f3a4d','#3b3631','#6d6a64','#08080a','#8a8680','#7a6a4a'];
