@@ -28,6 +28,21 @@ const url=process.argv[2]||'http://127.0.0.1:8795',out=process.argv[3];
     ok(await p.evaluate(()=>{Z=[];spawnZ(P.x+120,P.y,'screamer');spawnZ(P.x+380,P.y,'walker');const s=Z[0],w=Z[1];s.fx=-1;s.fy=0;s.senseT=0;w.fy=1;w.fx=0;updateZ(s,.016,false);return s.state==='chase'&&w.state==='inv'}),`${vp.w}: 비명꾼이 다른 좀비를 부른다`);
     // 폭죽
     ok(await p.evaluate(async()=>{Z=[];P.bag.fire=1;throwFire();await new Promise(r=>setTimeout(r,1100));return thrown.length===1&&thrown[0].st==='burn'}),`${vp.w}: 폭죽 터짐`);
+    // 건물 안: 들어가기 → 층 이동 → 뒤지기 → 나오기
+    const inside=await p.evaluate(async()=>{
+      Z=[];const b=buildings.find(b=>b.kind==='villa'&&b.floors>=3&&!b.home);
+      P.x=(b.door.x+.5)*T;P.y=(b.door.y+.5)*T;interact();
+      const r={in:!!G.area&&G.area.f===1,notOnExit:!inTile()};
+      const D=bfs(P.x,P.y);r.reach=conts.every(c=>D[(c.y/T|0)*MW+(c.x/T|0)]>=0);
+      let up=null;for(let i=0;i<MW*MH;i++)if(tile[i]===8)up=i;r.upReach=up!==null&&D[up]>=0;
+      P.x=(up%MW+.5)*T;P.y=((up/MW|0)+.5)*T;Z=[];interact();r.f2=G.area&&G.area.f===2;
+      const c=conts[0];if(c){Z=[];P.x=c.x;P.y=c.y+14;interact();await new Promise(z=>setTimeout(z,1700));r.searched=c.empty||c.loot!==null}else r.searched=true;
+      let dn=null;for(let i=0;i<MW*MH;i++)if(tile[i]===9)dn=i;P.x=(dn%MW+.5)*T;P.y=((dn/MW|0)+.5)*T;Z=[];interact();r.back1=G.area&&G.area.f===1;
+      const kept=G.floors[`${b.x},${b.y},2`].conts[0];r.kept=!c||kept===c;
+      let ex=null;for(let i=0;i<MW*MH;i++)if(tile[i]===10)ex=i;P.x=(ex%MW+.5)*T;P.y=((ex/MW|0)+.5)*T;interact();
+      r.out=!G.area&&hyp(P.x-(b.door.x+.5)*T,P.y-(b.door.y+.8)*T)<2&&buildings.length>50&&!!solid[b.y*MW+b.x];
+      return r});
+    ok(Object.values(inside).every(Boolean),`${vp.w}: 건물 안 층 이동·뒤지기·나오기 ${JSON.stringify(inside)}`);
     if(out)await p.screenshot({path:`${out}/field-${vp.w}.png`});
     // 밤
     await p.evaluate(()=>{G.t=NIGHT+40});await p.waitForTimeout(300);
