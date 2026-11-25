@@ -20,6 +20,7 @@
 | 구역 | `ZONES`(gangnam·subway·bridge·namsan: 이름·어둠·좀비 수·돌아가는 구역), `G.zone`, `ZC[id]`(떠난 구역 보관), `links`(구역 연결점, to:'final'은 송신기), `EXIT_DEF`(강남 출구=지하 계단 위치), `genSubway`/`genBridge`/`genNamsan`(seed+구역 고정 시드), `zoneGen`, `stashZone`/`restoreZone`, `spawnZone`, `travel`, `pruneUnreachable`, `ZLABELS`. tile 11 물 12 선로 13 승강장 끝 15 난간·개찰구 16 모래주머니. 건물 안은 강남에만 |
 | 엔딩 | `finalNeed`/`finalAsk`/`finalStart`/`finalTick`(90초 송신, 6칸 안에 있어야 진행)/`drawFinal`/`drawFinalBar`/`winFinal` |
 | 저장 | `SAVE_KEY='seoul-survivor-save-v1'`(키는 그대로, 내용 v2), `saveGame`/`loadGame`/`readSave`/`clearSave`. 지도는 seed로 재생성, 상자는 구역별 `zones[id]`의 conts 순서 인덱스로 복원(v1은 강남 하나로 읽음), 층 상자는 `G.floorSave`→`fillFloor`. 저장 구조를 바꾸면 v를 올리거나 loadGame에서 기본값을 채운다 |
+| 화면 분위기(시험) | 주소 `?look=noir`(&`rain=1`)일 때만: `VLOOK`, `noirPass`(1차 그림 후 채도 빼기 → 간판·피·반짝임·사람/좀비만 색으로 다시), `NEON`·`noirNightCut`·`noirNightGlow`(밤 간판 빛), `drawRain`. 기본 화면은 그대로 |
 | 상태 | `G`(day·t·state·stash·fac·kills), `P`(플레이어), `Z`(좀비), `noises`, `thrown`, `alarms` |
 | 판정 | `hitsSolid`, `move`, `los`, `bfs`, `fieldDir` |
 | 소리 | `noise(x,y,r,show)`, `scream`, `alarm` |
