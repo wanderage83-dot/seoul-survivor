@@ -397,6 +397,7 @@ function fillFloor(b,f,L){
         if(st.conts.some(c=>c.tx===x&&c.ty===y))continue;
         st.conts.push({x:(x+.5)*T,y:(y+.5)*T,tx:x,ty:y,type:lt,look,label:`${b.name} ${f}층`,loot:null,empty:false});}
     }
+    const sv=G.floorSave&&G.floorSave[key];if(sv)st.conts.forEach((c,i)=>{if(sv[i]){c.empty=!!sv[i][0];c.loot=sv[i][1]}});
   }
   if(!st.Z){
     const keep=Z;Z=[];
@@ -574,7 +575,7 @@ document.getElementById('cv').addEventListener('pointerdown',e=>{
 document.getElementById('cv').addEventListener('contextmenu',e=>e.preventDefault());
 $('#pausebtn').addEventListener('click',()=>{if(G&&G.state==='field')pause()});
 $('#mapbtn').addEventListener('click',()=>openMap());
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&G&&G.state==='field')pause()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&G){saveGame();if(G.state==='field')pause()}});
 if(matchMedia('(pointer:coarse)').matches)document.body.classList.add('touch');
 
 /* ───────── 플레이어 행동 ───────── */
@@ -718,6 +719,7 @@ function update(dt){
   if(G.t>NIGHT&&!G.warned){G.warned=1;toast('해가 졌다. 어둠 속에서 좀비가 늘어난다','red')}
   if(G.t>NIGHT-30&&!G.warn0){G.warn0=1;toast('곧 해가 진다. 거점으로 돌아가자','gold')}
   shake=Math.max(0,shake-dt*30);
+  G.saveT=(G.saveT||15)-dt;if(G.saveT<=0)saveGame();
   if(P.hp<=0)gameOver('hp');else if(P.inf>=100)gameOver('inf');
 }
 function spawnNear(){
@@ -774,7 +776,7 @@ function updateZ(z,dt,night){
 }
 
 /* ───────── 거점 ───────── */
-function pause(){G.state='pause';showScreen(`<div class="win big"><h1>일시정지</h1><p>${G.day}일차 · ${clockText()}</p><div class="keys">이동 WASD·방향키 · 달리기 Shift · 지도 M<br>공격 Space·클릭 · 뒤지기/거점 E<br>폭죽 F·우클릭 · 아이템 1~5</div><button class="btn pri" onclick="resume()">계속하기</button><button class="btn" onclick="titleScreen()">처음 화면으로</button></div>`)}
+function pause(){G.state='pause';showScreen(`<div class="win big"><h1>일시정지</h1><p>${G.day}일차 · ${clockText()}</p><div class="keys">이동 WASD·방향키 · 달리기 Shift · 지도 M<br>공격 Space·클릭 · 뒤지기/거점 E<br>폭죽 F·우클릭 · 아이템 1~5</div><button class="btn pri" onclick="resume()">계속하기</button><button class="btn" onclick="saveGame();titleScreen()">저장하고 처음 화면으로</button></div>`)}
 function resume(){G.state='field';closeScreen();last=performance.now()}
 function openBase(){
   G.state='base';P.search=null;
@@ -782,13 +784,13 @@ function openBase(){
   for(const id of got)addTo(G.stash,id,P.bag[id]);
   P.bag={};
   if(got.length)toast('가방을 비워 창고에 넣었다','green');
-  renderBase();
+  saveGame();renderBase();
 }
 function leaveBase(){
   $('#modal').classList.remove('on');G.state='field';
   P.x=(HOME_TILE.x+.5)*T;P.y=(HOME_TILE.y+.8)*T;P.fy=1;P.fx=0;
   for(const z of Z){if(hyp(z.x-P.x,z.y-P.y)<90){z.x+=(z.x-P.x)>0?90:-90}}
-  last=performance.now();
+  last=performance.now();saveGame();
 }
 function has(need){return Object.entries(need).every(([k,v])=>(G.stash[k]||0)>=v)}
 function needText(need){return Object.entries(need).map(([k,v])=>`<span class="${(G.stash[k]||0)<v?'no':''}">${ITEMS[k].ic}${ITEMS[k].n} ${G.stash[k]||0}/${v}</span>`).join(' ')}
@@ -825,7 +827,7 @@ function renderBase(){
     const ids=['can','ramen','veg','water','bandage','anti','fire'];
     body=`<div class="mats">가방 <b>${bagCount()}/${BAG_CAP}</b> · 거점에 들어오면 가방은 자동으로 비워진다</div><div class="list">${ids.map(id=>`<div class="it"><div class="nm">${ITEMS[id].ic} ${ITEMS[id].n}<small>창고 ${G.stash[id]||0}</small></div><button ${P.bag[id]?'':'disabled'} onclick="pack('${id}',-1)">−</button><span class="cnt">${P.bag[id]||0}</span><button ${G.stash[id]&&bagCount()<BAG_CAP?'':'disabled'} onclick="pack('${id}',1)">+</button></div>`).join('')}</div>`;
   }
-  m.innerHTML=`<div class="win"><div class="whead"><div><h2>옥상 거점 · 청운 오피스텔</h2><small>${G.day}일차 · ${clockText()} · 처치 ${G.kills}</small></div></div><div class="tabs">${tabs}</div><div class="wbody">${body}</div><div class="wfoot"><button onclick="leaveBase()">밖으로 나가기</button><button class="pri" onclick="sleep()">잠자기 → ${G.day+1}일차</button></div></div>`;
+  m.innerHTML=`<div class="win"><div class="whead"><div><h2>옥상 거점 · 청운 오피스텔</h2><small>${G.day}일차 · ${clockText()} · 처치 ${G.kills} · 💾 자동 저장됨</small></div></div><div class="tabs">${tabs}</div><div class="wbody">${body}</div><div class="wfoot"><button onclick="leaveBase()">밖으로 나가기</button><button class="pri" onclick="sleep()">잠자기 → ${G.day+1}일차</button></div></div>`;
   m.classList.add('on');
 }
 function craft(i){
@@ -875,26 +877,67 @@ function sleep(){
   if(P.hp<=0){gameOver('hp');return}
   if(P.inf>=100){gameOver('inf');return}
   if(G.day>WIN_DAY){win();return}
+  saveGame();
   const m=$('#modal');
   m.innerHTML=`<div class="win"><div class="whead"><div><h2>${day}일차 밤이 지났다</h2><small>${G.day}일차 아침 06:00</small></div></div><div class="wbody"><div class="list">${['배고픔 −25 · 갈증 −25 · 체력 +15',...log].map(s=>`<div class="it">${s}</div>`).join('')}</div>${G.day===WIN_DAY?'<p style="color:var(--accent)">오늘을 버티면 7일째 밤이 끝난다.</p>':''}</div><div class="wfoot"><button class="pri" onclick="renderBase()">확인</button></div></div>`;
   m.classList.add('on');
 }
 
+/* ───────── 저장·불러오기 ─────────
+   브라우저 localStorage 한 칸. 지도는 seed로 다시 만들고, 바뀐 것(창고·가방·뒤진 상자·경보 울린 차·층별 상자)만 저장한다.
+   좀비 위치는 저장하지 않는다(불러오면 그날 수만큼 다시 퍼진다). 죽거나 7일을 버티면 저장을 지운다. */
+const SAVE_KEY='seoul-survivor-save-v1';
+function readSave(){try{const d=JSON.parse(localStorage.getItem(SAVE_KEY));return d&&d.v===1?d:null}catch(e){return null}}
+function clearSave(){try{localStorage.removeItem(SAVE_KEY)}catch(e){}}
+function saveGame(){
+  if(!G||G.state==='over'||!P)return false;
+  try{
+    if(G.area)saveFloor();
+    const sc=G.area?STREET.conts:conts,scar=G.area?STREET.cars:cars;
+    const floors=Object.assign({},G.floorSave||{});
+    for(const k in G.floors){const f=G.floors[k];if(f.conts)floors[k]=f.conts.map(c=>[c.empty?1:0,c.loot])}
+    const d={v:1,at:Date.now(),
+      G:{day:G.day,t:G.t,seed:G.seed,stash:G.stash,fac:G.fac,kills:G.kills,warned:G.warned||0,warn0:G.warn0||0},
+      P:{x:P.x,y:P.y,fx:P.fx,fy:P.fy,hp:P.hp,food:P.food,water:P.water,inf:P.inf,weapon:{id:P.weapon.id,dur:P.weapon.id==='fist'?0:P.weapon.dur},bag:P.bag},
+      conts:sc.map(c=>[c.empty?1:0,c.loot]),cars:scar.map(c=>c.fired?1:0),floors,
+      area:G.area?{bx:G.area.b.x,by:G.area.b.y,f:G.area.f}:null,base:G.state==='base'};
+    localStorage.setItem(SAVE_KEY,JSON.stringify(d));G.saveT=15;return true;
+  }catch(e){return false}
+}
+function loadGame(){
+  const d=readSave();if(!d){newGame();return}
+  newGame();
+  Object.assign(G,d.G,{floors:{},area:null,floorSave:d.floors||{},saveT:15});
+  gen(G.seed);
+  d.conts.forEach((s,i)=>{const c=conts[i];if(c){c.empty=!!s[0];c.loot=s[1]}});
+  d.cars.forEach((f,i)=>{if(cars[i])cars[i].fired=!!f});
+  Object.assign(P,d.P,{bag:d.P.bag||{},search:null});
+  if(P.weapon.id==='fist')P.weapon.dur=Infinity;
+  R=Math.random;spawnDay();
+  if(d.area){const b=buildings.find(b=>b.x===d.area.bx&&b.y===d.area.by);if(b){enterFloor(b,d.area.f,false);P.x=d.P.x;P.y=d.P.y}}
+  else Z=Z.filter(z=>hyp(z.x-P.x,z.y-P.y)>8*T);
+  $('#toasts').innerHTML='';
+  toast(`${G.day}일차 ${clockText()} · 이어서 시작`,'gold');
+  if(d.base)openBase();
+}
+addEventListener('pagehide',()=>saveGame());
+
 /* ───────── 화면 전환 ───────── */
 function showScreen(h){const s=$('#screen');s.innerHTML=h;s.classList.add('on')}
 function closeScreen(){$('#screen').classList.remove('on')}
 function titleScreen(){
-  G=null;document.body.classList.remove('ingame');$('#modal').classList.remove('on');
+  const sv=readSave();G=null;document.body.classList.remove('ingame');$('#modal').classList.remove('on');
   showScreen(`<div class="win big"><h1>서울, 잔류자</h1><p>감염 40일째. 봉쇄된 서울 강남역.<br>먹자골목 안쪽 오피스텔 옥상에 거점을 차렸다. <b style="color:var(--accent)">7일</b>을 버티자.</p>
   <div class="keys">• 낮에 강남역~신논현역 거리를 뒤져 식량·물·재료를 모은다<br>• 모든 행동은 <b>소리</b>를 낸다. 뛰거나 싸우면 좀비가 몰려온다<br>• <b style="color:#c9a6ff">비명꾼</b>을 먼저 잡아라 · 깜박이는 차는 경보가 울린다<br>• 밤이 되기 전 오피스텔 앞으로 돌아와 [뒤지기/E]로 들어간다</div>
-  <button class="btn pri" onclick="newGame()">시작하기</button></div>`);
+  ${sv?`<button class="btn pri" onclick="loadGame()">이어하기 · ${sv.G.day}일차 ${svTime(sv)}</button><button class="btn" onclick="if(confirm('저장된 기록이 지워집니다. 새로 시작할까요?')){clearSave();newGame()}">새로 시작</button>`:`<button class="btn pri" onclick="newGame()">시작하기</button>`}</div>`);
 }
+function svTime(d){const m=360+d.G.t/DAY*1080;return `${String(m/60|0).padStart(2,'0')}:${String(m%60|0).padStart(2,'0')}${d.area?' · 건물 안':d.base?' · 거점':''}`}
 function gameOver(k){
-  G.state='over';$('#modal').classList.remove('on');
+  G.state='over';clearSave();$('#modal').classList.remove('on');
   showScreen(`<div class="win big"><h1>${k==='inf'?'감염':'쓰러졌다'}</h1><p>${k==='inf'?'열이 오르고 시야가 흐려졌다. 더는 사람이 아니다.':'아스팔트 위에 쓰러졌다. 멀리서 발소리가 다가온다.'}</p><p>${G.day}일차 · 처치 ${G.kills}</p><button class="btn pri" onclick="newGame()">다시 시작</button><button class="btn" onclick="titleScreen()">처음 화면으로</button></div>`);
 }
 function win(){
-  G.state='over';$('#modal').classList.remove('on');
+  G.state='over';clearSave();$('#modal').classList.remove('on');
   showScreen(`<div class="win big"><h1>8일째 아침</h1><p>무전기에서 잡음 섞인 목소리가 들렸다.<br>“…남산 송신소… 살아 있는 사람… 응답하라…”</p><p style="color:var(--accent)">7일 생존 달성 · 처치 ${G.kills}</p><p>다음 이야기: 한강을 건너 남산으로 (개발 예정)</p><button class="btn pri" onclick="newGame()">처음부터 다시</button></div>`);
 }
 

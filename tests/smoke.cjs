@@ -43,6 +43,21 @@ const url=process.argv[2]||'http://127.0.0.1:8795',out=process.argv[3];
       r.out=!G.area&&hyp(P.x-(b.door.x+.5)*T,P.y-(b.door.y+.8)*T)<2&&buildings.length>50&&!!solid[b.y*MW+b.x];
       return r});
     ok(Object.values(inside).every(Boolean),`${vp.w}: 건물 안 층 이동·뒤지기·나오기 ${JSON.stringify(inside)}`);
+    // 저장·불러오기: 상태를 바꾸고 저장 → 새로고침 → 이어하기
+    const before=await p.evaluate(()=>{
+      G.day=3;G.t=77;G.stash.wood=7;G.fac.rain=1;G.kills=9;P.hp=63;P.bag={can:2};P.weapon={id:'axe',dur:31};
+      const c=conts.find(c=>c.type==='mart');c.empty=true;c.loot=[];
+      const b=buildings.find(b=>b.kind==='villa'&&b.floors>=3&&!b.home);P.x=(b.door.x+.5)*T;P.y=(b.door.y+.5)*T;Z=[];interact();
+      conts.forEach(c=>{c.empty=true;c.loot=[]});const px=P.x,py=P.y;saveGame();
+      return {mart:conts.length,ci:0,px,py,bx:b.x,by:b.y,martIdx:null}});
+    await p.reload();await p.waitForTimeout(300);
+    ok(await p.isVisible('text=이어하기'),`${vp.w}: 처음 화면에 이어하기`);
+    await p.click('text=이어하기');await p.waitForTimeout(300);
+    const after=await p.evaluate(()=>({day:G.day,t:Math.round(G.t),wood:G.stash.wood,rain:G.fac.rain,kills:G.kills,hp:P.hp,can:P.bag.can,w:P.weapon.id+P.weapon.dur,area:G.area&&G.area.f,px:P.x,py:P.y,floorEmpty:conts.every(c=>c.empty),streetMart:STREET.conts.find(c=>c.type==='mart').empty}));
+    ok(after.day===3&&after.t===77&&after.wood===7&&after.rain===1&&after.kills===9&&after.hp===63&&after.can===2&&after.w==='axe31'&&after.area===1&&after.px===before.px&&after.floorEmpty&&after.streetMart,`${vp.w}: 저장한 상태 그대로 이어짐 ${JSON.stringify(after)}`);
+    await p.evaluate(()=>{exitToStreet();P.hp=0});await p.waitForTimeout(200);
+    ok(await p.evaluate(()=>G.state==='over'&&!readSave()),`${vp.w}: 죽으면 저장이 지워진다`);
+    await p.evaluate(()=>newGame());
     if(out)await p.screenshot({path:`${out}/field-${vp.w}.png`});
     // 밤
     await p.evaluate(()=>{G.t=NIGHT+40});await p.waitForTimeout(300);
