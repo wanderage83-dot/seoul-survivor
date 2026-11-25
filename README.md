@@ -32,6 +32,8 @@ node tests/smoke.cjs http://127.0.0.1:8795
 검사에는 Playwright가 필요하다(게임 자체에는 의존성 없음).
 
 ## 다음 단계 후보
+공개 주소: https://seoul-survivor-ashen.vercel.app
+
 기획 전체는 `notes/2026-11-25_서울좀비생존_기획안.md`.
 1. 아파트 건물 안(층별 탐색)
 2. 동료 생존자

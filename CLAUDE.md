@@ -6,7 +6,7 @@
 - 게임 내 문구는 한국어로 쓴다. 기능을 바꾸면 `README.md`도 고친다.
 - 세로 휴대폰(390×844)·가로 휴대폰(844×390)·PC(1280×720)에서 확인한다. 수정 후 `node tests/smoke.cjs <정적서버URL>`이 통과해야 한다.
 - md 메모는 `notes/YYYY-MM-DD_내용.md`에 둔다. `.vercelignore`가 notes·tests·md를 배포에서 뺀다.
-- 공개 주소: https://seoul-survivor.vercel.app (Vercel 프로젝트 seoul-survivor, 팀 bridgej). 새 버전은 main에 올린 뒤 create_deployment(gitSource ref main, target production)로 다시 배포한다.
+- 공개 주소: https://seoul-survivor-ashen.vercel.app (seoul-survivor.vercel.app은 이미 다른 사람이 써서 Vercel이 붙인 주소) (Vercel 프로젝트 seoul-survivor, 팀 bridgej). 새 버전은 main에 올린 뒤 create_deployment(gitSource ref main, target production)로 다시 배포한다.
 
 ## 코드 지도 (index.html 안 `/* ─── */` 구획)
 | 구획 | 주요 심볼 |
