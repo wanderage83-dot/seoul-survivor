@@ -58,6 +58,28 @@ const url=process.argv[2]||'http://127.0.0.1:8795',out=process.argv[3];
     await p.evaluate(()=>{exitToStreet();P.hp=0});await p.waitForTimeout(200);
     ok(await p.evaluate(()=>G.state==='over'&&!readSave()),`${vp.w}: 죽으면 저장이 지워진다`);
     await p.evaluate(()=>newGame());
+    // 동료: 위치 신호 → 그 층에서 만나기 → 물건 주고 데려오기 → 거점 도움 → 데리고 나가 싸우기
+    const ally=await p.evaluate(async()=>{
+      const r={};const sv=G.surv.gangseok;const b=buildings.find(b=>b.x===sv.bx&&b.y===sv.by);
+      r.hint=hinted('gangseok')&&!hinted('malsun');
+      P.x=(b.door.x+.5)*T;P.y=(b.door.y+.5)*T;Z=[];interact();
+      while(G.area.f<sv.f){let up=null;for(let i=0;i<MW*MH;i++)if(tile[i]===8)up=i;P.x=(up%MW+.5)*T;P.y=((up/MW|0)+.5)*T;Z=[];interact()}
+      r.npc=NPCS.length===1&&NPCS[0].id==='gangseok';
+      const D=bfs((G.area?P.x:0),P.y);r.npcReach=D[(NPCS[0].y/T|0)*MW+(NPCS[0].x/T|0)]>=0;
+      P.bag={};P.x=NPCS[0].x+30;P.y=NPCS[0].y;interact();r.talk=G.state==='talk'&&$('#modal .pri').disabled;talkEnd();
+      P.bag={can:1};interact();$('#modal .pri').click();r.recruit=G.surv.gangseok.st==='base'&&!P.bag.can&&NPCS.length===0;
+      exitToStreet();P.x=(HOME_TILE.x+.5)*T;P.y=(HOME_TILE.y+.6)*T;Z=[];interact();
+      G.tab='ally';renderBase();r.tab=$('#modal').textContent.includes('최강석');
+      G.follow='gangseok';leaveBase();r.follow=!!ALLY&&ALLY.id==='gangseok';
+      Z=[];spawnZ(P.x+60,P.y+40,'walker');Z[0].state='chase';const z0=Z[0];
+      for(let i=0;i<300&&Z.includes(z0);i++){P.hp=100;update(1/60)}
+      r.fight=!Z.includes(z0);
+      G.surv.doyun.st='base';G.stash={can:5,water:5};const m0=['scrap','cloth','wood','tape','parts'].reduce((a,k)=>a+(G.stash[k]||0),0);
+      interact();sleep();const m1=['scrap','cloth','wood','tape','parts'].reduce((a,k)=>a+(G.stash[k]||0),0);
+      r.morning=m1===m0+2&&G.stash.can===3&&G.stash.water===3;
+      saveGame();r.saved=readSave().G.surv.gangseok.st==='base';
+      return r});
+    ok(Object.values(ally).every(Boolean),`${vp.w}: 동료 찾기·데려오기·싸움·아침 도움·저장 ${JSON.stringify(ally)}`);
     if(out)await p.screenshot({path:`${out}/field-${vp.w}.png`});
     // 밤
     await p.evaluate(()=>{G.t=NIGHT+40});await p.waitForTimeout(300);

@@ -16,6 +16,7 @@
 | 지도 | 강남역~신논현역. `ROADS`(길 사각형), `ALLEYS`(먹자골목), `STATIONS`, `LANDMARKS`(고정 건물), `CHAIN`/`ALLEY`/`OFFICE`(패러디 상호·물건 종류·색), `gen(seed)`가 길→블록→보도→랜드마크→줄지은 건물→출구·가로수·차량 순으로 만든다. `tile`(0차도 1보도 2화단 3골목 4버스차로), `mk`(차선·횡단보도 비트), `HOME_TILE`은 gen이 정한다 |
 | 지도 화면 | `openMap`/`closeMap` (`G.state='map'`), `drawGround`, `drawExit` |
 | 건물 안 | `STREET`(거리 배열 보관), `G.area={b,f,style}`, `G.floors['x,y,f']={conts,Z}`, `floorsOf`, `genFloor`(좌표+층 시드라 늘 같은 모양), `fillFloor`, `enterFloor`/`exitToStreet`/`useStairs`, `doorBuilding`, `inTile`, `drawInTile`. tile 5 바닥 6 벽 7 바깥 8 위계단 9 아래계단 10 출구 |
+| 동료 | `SURV`(5명: 대사·원하는 것·능력), `SURV_ORDER`, `G.surv[id]={st:'lost'|'base'|'hurt',bx,by,f}`, `G.follow`, `ALLY`(따라다니는 동료), `NPCS`(이 층의 숨은 생존자), `placeSurvivors`, `hinted`(하루 한 명씩 위치 공개), `placeNpcs`, `talkTo`/`recruit`, `spawnAlly`/`allyUpdate`/`hurtAlly`/`allyDown`, `crewSleep`/`crewMorning`, `allyTab`, `bagCap`, `searchTime` |
 | 저장 | `SAVE_KEY='seoul-survivor-save-v1'`, `saveGame`/`loadGame`/`readSave`/`clearSave`. 지도는 seed로 재생성, 상자는 conts 순서 인덱스로 복원, 층 상자는 `G.floorSave`→`fillFloor`. 저장 구조를 바꾸면 v를 올리거나 loadGame에서 기본값을 채운다 |
 | 상태 | `G`(day·t·state·stash·fac·kills), `P`(플레이어), `Z`(좀비), `noises`, `thrown`, `alarms` |
 | 판정 | `hitsSolid`, `move`, `los`, `bfs`, `fieldDir` |
