@@ -21,7 +21,7 @@
 | 행동 | `attack`, `interact`, `finishSearch`, `throwFire`, `useItem`, `hurtPlayer` |
 | 갱신 | `update(dt)`, `updateZ` (상태 idle → inv(소리 조사) → chase) |
 | 거점 | `openBase`, `renderBase`, `craft`, `build`, `pack`, `sleep`(하루 정산·습격) |
-| 그리기 | `render`, `drawBuilding`(지붕을 H만큼 올린 3/4 시점), `drawZombie`, `drawPlayer`, 밤 어둠 `dk` |
+| 그리기 | `render`, `drawBuilding`(그림을 자기 땅 안에: 위는 지붕·아래는 앞면, 높은 빌딩만 48px 넘침. 골목이 가려지지 않게), `drawZombie`, `drawPlayer`, 밤 어둠 `dk` |
 
 - `G.state`: `field` → `base`(거점 창) / `pause` → `over`.
 - 하루 길이 `DAY=240`초, 밤 시작 `NIGHT=150`초, 승리 `WIN_DAY=7`.

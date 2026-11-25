@@ -822,7 +822,7 @@ function render(){
   cam.x=P.x;cam.y=P.y-18;
   const sx=(R()-.5)*shake,sy=(R()-.5)*shake;
   ctx.setTransform(DPR*zoom,0,0,DPR*zoom,DPR*(W/2-cam.x*zoom+sx),DPR*(H/2-cam.y*zoom+sy));
-  const vx0=cam.x-W/2/zoom-T,vy0=cam.y-H/2/zoom-T,vx1=cam.x+W/2/zoom+T,vy1=cam.y+H/2/zoom+360;
+  const vx0=cam.x-W/2/zoom-T,vy0=cam.y-H/2/zoom-T,vx1=cam.x+W/2/zoom+T,vy1=cam.y+H/2/zoom+120;
   const tx0=Math.max(0,vx0/T|0),ty0=Math.max(0,vy0/T|0),tx1=Math.min(MW-1,vx1/T|0),ty1=Math.min(MH-1,vy1/T|0);
   drawGround(tx0,ty0,tx1,ty1);
   for(const d of decals){if(d.x<vx0||d.x>vx1||d.y<vy0||d.y>vy1)continue;ctx.fillStyle='rgba(70,12,10,.5)';ctx.beginPath();ctx.ellipse(d.x,d.y,d.r,d.r*.6,d.a,0,7);ctx.fill()}
@@ -835,7 +835,7 @@ function render(){
   for(const c of conts){if(c.car||c.x<vx0||c.x>vx1||c.y<vy0||c.y>vy1)continue;drawCont(c)}
   // 깊이 정렬
   const objs=[];
-  for(const b of buildings){const bx=b.x*T,by=b.y*T;if(bx+b.w*T<vx0||bx>vx1||by-b.H>vy1||by+b.h*T<vy0)continue;objs.push([by+b.h*T,0,b])}
+  for(const b of buildings){const bx=b.x*T,by=b.y*T;if(bx+b.w*T<vx0||bx>vx1||by-48>vy1||by+b.h*T<vy0)continue;objs.push([by+b.h*T,0,b])}
   for(const c of cars){const cx=c.x*T,cy=c.y*T;if(cx>vx1||cx+64<vx0||cy>vy1||cy+64<vy0)continue;objs.push([cy+c.h*T,1,c])}
   for(const e of exits){const ex=e.x*T,ey=e.y*T;if(ex<vx0||ex>vx1||ey<vy0||ey>vy1)continue;objs.push([ey+2*T,6,e])}
   for(const t of trees){if(t.x<vx0||t.x>vx1||t.y<vy0||t.y>vy1+60)continue;objs.push([t.y+10,2,t])}
@@ -912,8 +912,9 @@ function drawGround(tx0,ty0,tx1,ty1){
 }
 function fitText(s,maxW,size){ctx.font=`bold ${size}px sans-serif`;while(ctx.measureText(s).width>maxW&&size>7){size--;ctx.font=`bold ${size}px sans-serif`}return size}
 function drawBuilding(b){
-  const x=b.x*T,y=b.y*T,w=b.w*T,h=b.h*T,Hh=b.H,fy=y+h-Hh,gf=36,hv0=hash(b.x,b.y);
-  ctx.globalAlpha=behind(x,y-Hh,x+w,y)?.35:1;
+  // 그림을 자기 땅(발자국) 안에 둔다: 위쪽은 지붕, 아래쪽은 앞면. 높은 빌딩만 최대 48px 위로 넘친다.
+  const x=b.x*T,y=b.y*T,w=b.w*T,h=b.h*T,ov=b.kind==='tower'?48:0,Hh=Math.round(Math.min(b.H,h*.65+ov)),fy=y+h-Hh,ry=y-ov,rh=h+ov-Hh,gf=36,hv0=hash(b.x,b.y);
+  ctx.globalAlpha=ov&&behind(x,ry,x+w,y+rh)?.4:1;
   ctx.fillStyle='rgba(0,0,0,.25)';ctx.fillRect(x+6,y+h-4,w,8);
   // 앞면
   if(b.kind==='tower'){
@@ -940,16 +941,17 @@ function drawBuilding(b){
   const dx=b.door.x*T+T/2;ctx.fillStyle=b.home?'#6b4a22':'#0f1316';ctx.fillRect(dx-10,y+h-20,20,20);
   if(b.home){ctx.fillStyle='rgba(255,200,110,.5)';ctx.fillRect(dx-8,y+h-18,16,4)}
   // 지붕
-  ctx.fillStyle=b.kind==='tower'?'#4a545c':['#6b6962','#5f5d57','#726e66'][hv0*3|0];ctx.fillRect(x,y-Hh,w,h);
-  ctx.strokeStyle='rgba(0,0,0,.35)';ctx.lineWidth=3;ctx.strokeRect(x+1.5,y-Hh+1.5,w-3,h-3);
-  if(w>=96&&h>=96){ctx.fillStyle='#57554f';ctx.fillRect(x+w-40,y-Hh+10,26,18)}
-  if(w>=64){ctx.fillStyle='#8a8f94';ctx.fillRect(x+10,y-Hh+10,12,10);ctx.fillRect(x+26,y-Hh+10,12,10)}
+  ctx.fillStyle=b.kind==='tower'?'#4a545c':['#6b6962','#5f5d57','#726e66'][hv0*3|0];ctx.fillRect(x,ry,w,rh);
+  ctx.strokeStyle='rgba(0,0,0,.35)';ctx.lineWidth=3;ctx.strokeRect(x+1.5,ry+1.5,w-3,rh-3);
+  ctx.fillStyle='rgba(0,0,0,.18)';ctx.fillRect(x,ry+rh-6,w,6);
+  if(w>=96&&rh>=40){ctx.fillStyle='#57554f';ctx.fillRect(x+w-40,ry+8,26,18)}
+  if(w>=64&&rh>=24){ctx.fillStyle='#8a8f94';ctx.fillRect(x+10,ry+8,12,10);ctx.fillRect(x+26,ry+8,12,10)}
   if(b.home){
     const rw=w-12;
-    if(G.fac.garden){ctx.fillStyle='#4f6a3a';ctx.fillRect(x+6,y-Hh+h*.5,rw*.5*G.fac.garden/2,h*.4)}
-    if(G.fac.rain){ctx.fillStyle='#4f7fa8';ctx.fillRect(x+w-36,y-Hh+h*.55,24,24)}
-    ctx.strokeStyle='#ddd';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x+w/2,y-Hh+h*.6);ctx.lineTo(x+w/2,y-Hh+8);ctx.stroke();
-    ctx.fillStyle='#e6b94c';ctx.beginPath();ctx.moveTo(x+w/2,y-Hh+8);ctx.lineTo(x+w/2+24,y-Hh+15);ctx.lineTo(x+w/2,y-Hh+22);ctx.fill();
+    if(G.fac.garden){ctx.fillStyle='#4f6a3a';ctx.fillRect(x+6,ry+rh*.35,rw*.5*G.fac.garden/2,rh*.55)}
+    if(G.fac.rain){ctx.fillStyle='#4f7fa8';ctx.fillRect(x+w-30,ry+rh*.4,20,Math.min(20,rh*.5))}
+    ctx.strokeStyle='#ddd';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x+w/2,ry+rh-6);ctx.lineTo(x+w/2,ry-30);ctx.stroke();
+    ctx.fillStyle='#e6b94c';ctx.beginPath();ctx.moveTo(x+w/2,ry-30);ctx.lineTo(x+w/2+24,ry-23);ctx.lineTo(x+w/2,ry-16);ctx.fill();
     for(let i=0;i<G.fac.barr;i++){ctx.fillStyle='#7a5a34';ctx.fillRect(dx-40-i*8,y+h-10-i*5,24,8);ctx.fillRect(dx+16+i*8,y+h-10-i*5,24,8)}
     ctx.fillStyle='#e6b94c';ctx.font='bold 13px sans-serif';ctx.textAlign='center';ctx.fillText('거점',dx,y+h-gf-6);
   }
