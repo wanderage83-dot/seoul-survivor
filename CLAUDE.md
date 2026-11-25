@@ -2,6 +2,7 @@
 
 서울을 무대로 한 쿼터뷰 좀비 생존 게임. **정적 HTML 단일 파일**(`index.html`)이며 빌드 도구·npm 의존성을 넣지 않는다.
 
+- 실제 지명·길 배치는 참고하되 상호는 비튼 이름(스타벅수, 다있소 등)으로 쓴다. 실제 상호·로고를 그대로 쓰지 않는다.
 - 기획 원본: `notes/2026-11-25_서울좀비생존_기획안.md`. 장르(탐색·제작·거점 생존)만 참고하는 원작이다. 다른 게임의 이름·인물·그림·맵을 가져오지 않는다.
 - 게임 내 문구는 한국어로 쓴다. 기능을 바꾸면 `README.md`도 고친다.
 - 세로 휴대폰(390×844)·가로 휴대폰(844×390)·PC(1280×720)에서 확인한다. 수정 후 `node tests/smoke.cjs <정적서버URL>`이 통과해야 한다.
@@ -12,7 +13,8 @@
 | 구획 | 주요 심볼 |
 |---|---|
 | 데이터 | `ITEMS`, `WEAP`, `LOOT`(뒤질 것별 드롭표), `ZT`(좀비 종류), `RECIPES`, `FACS` |
-| 지도 | `gen(seed)`, `tile`/`solid`/`sightB`, `buildings`, `cars`, `trees`, `conts`, `HOME_TILE` |
+| 지도 | 강남역~신논현역. `ROADS`(길 사각형), `ALLEYS`(먹자골목), `STATIONS`, `LANDMARKS`(고정 건물), `CHAIN`/`ALLEY`/`OFFICE`(패러디 상호·물건 종류·색), `gen(seed)`가 길→블록→보도→랜드마크→줄지은 건물→출구·가로수·차량 순으로 만든다. `tile`(0차도 1보도 2화단 3골목 4버스차로), `mk`(차선·횡단보도 비트), `HOME_TILE`은 gen이 정한다 |
+| 지도 화면 | `openMap`/`closeMap` (`G.state='map'`), `drawGround`, `drawExit` |
 | 상태 | `G`(day·t·state·stash·fac·kills), `P`(플레이어), `Z`(좀비), `noises`, `thrown`, `alarms` |
 | 판정 | `hitsSolid`, `move`, `los`, `bfs`, `fieldDir` |
 | 소리 | `noise(x,y,r,show)`, `scream`, `alarm` |
