@@ -17,7 +17,9 @@
 | 지도 화면 | `openMap`/`closeMap` (`G.state='map'`), `drawGround`, `drawExit` |
 | 건물 안 | `STREET`(거리 배열 보관), `G.area={b,f,style}`, `G.floors['x,y,f']={conts,Z}`, `floorsOf`, `genFloor`(좌표+층 시드라 늘 같은 모양), `fillFloor`, `enterFloor`/`exitToStreet`/`useStairs`, `doorBuilding`, `inTile`, `drawInTile`. tile 5 바닥 6 벽 7 바깥 8 위계단 9 아래계단 10 출구 |
 | 동료 | `SURV`(5명: 대사·원하는 것·능력), `SURV_ORDER`, `G.surv[id]={st:'lost'|'base'|'hurt',bx,by,f}`, `G.follow`, `ALLY`(따라다니는 동료), `NPCS`(이 층의 숨은 생존자), `placeSurvivors`, `hinted`(하루 한 명씩 위치 공개), `placeNpcs`, `talkTo`/`recruit`, `spawnAlly`/`allyUpdate`/`hurtAlly`/`allyDown`, `crewSleep`/`crewMorning`, `allyTab`, `bagCap`, `searchTime` |
-| 저장 | `SAVE_KEY='seoul-survivor-save-v1'`, `saveGame`/`loadGame`/`readSave`/`clearSave`. 지도는 seed로 재생성, 상자는 conts 순서 인덱스로 복원, 층 상자는 `G.floorSave`→`fillFloor`. 저장 구조를 바꾸면 v를 올리거나 loadGame에서 기본값을 채운다 |
+| 구역 | `ZONES`(gangnam·subway·bridge·namsan: 이름·어둠·좀비 수·돌아가는 구역), `G.zone`, `ZC[id]`(떠난 구역 보관), `links`(구역 연결점, to:'final'은 송신기), `EXIT_DEF`(강남 출구=지하 계단 위치), `genSubway`/`genBridge`/`genNamsan`(seed+구역 고정 시드), `zoneGen`, `stashZone`/`restoreZone`, `spawnZone`, `travel`, `pruneUnreachable`, `ZLABELS`. tile 11 물 12 선로 13 승강장 끝 15 난간·개찰구 16 모래주머니. 건물 안은 강남에만 |
+| 엔딩 | `finalNeed`/`finalAsk`/`finalStart`/`finalTick`(90초 송신, 6칸 안에 있어야 진행)/`drawFinal`/`drawFinalBar`/`winFinal` |
+| 저장 | `SAVE_KEY='seoul-survivor-save-v1'`(키는 그대로, 내용 v2), `saveGame`/`loadGame`/`readSave`/`clearSave`. 지도는 seed로 재생성, 상자는 구역별 `zones[id]`의 conts 순서 인덱스로 복원(v1은 강남 하나로 읽음), 층 상자는 `G.floorSave`→`fillFloor`. 저장 구조를 바꾸면 v를 올리거나 loadGame에서 기본값을 채운다 |
 | 상태 | `G`(day·t·state·stash·fac·kills), `P`(플레이어), `Z`(좀비), `noises`, `thrown`, `alarms` |
 | 판정 | `hitsSolid`, `move`, `los`, `bfs`, `fieldDir` |
 | 소리 | `noise(x,y,r,show)`, `scream`, `alarm` |
@@ -27,4 +29,4 @@
 | 그리기 | `render`, `drawBuilding`(그림을 자기 땅 안에: 위는 지붕·아래는 앞면, 높은 빌딩만 48px 넘침. 골목이 가려지지 않게), `drawZombie`, `drawPlayer`, 밤 어둠 `dk` |
 
 - `G.state`: `field` → `base`(거점 창) / `map` / `pause` → `over`. 건물 안에 있어도 state는 `field`이고 `G.area`로 구별한다. 잠은 거리의 거점에서만 잔다.
-- 하루 길이 `DAY=240`초, 밤 시작 `NIGHT=150`초, 승리 `WIN_DAY=7`.
+- 하루 길이 `DAY=240`초, 밤 시작 `NIGHT=150`초. 날짜 제한 없음, 승리는 남산 송신.

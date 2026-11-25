@@ -104,7 +104,7 @@ body:not(.ingame) #hud,body:not(.ingame) #btns,body:not(.ingame) #joyzone,body:n
 <script>
 'use strict';
 /* ───────── 기본 상수 ───────── */
-const T=32,MW=84,MH=100,DAY=240,NIGHT=150,BAG_CAP=18,WIN_DAY=7;
+const T=32,MW=84,MH=100,DAY=240,NIGHT=150,BAG_CAP=18;
 let HOME_TILE={x:0,y:0};
 const $=s=>document.querySelector(s);
 const clamp=(v,a,b)=>v<a?a:v>b?b:v, lerp=(a,b,t)=>a+(b-a)*t, hyp=Math.hypot;
@@ -148,7 +148,9 @@ const LOOT={
   office:{n:'사무실',t:[['water',.4],['parts',.3],['tape',.3],['cloth',.2],['can',.15]]},
   book:{n:'서가',t:[['cloth',.2],['tape',.4],['wood',.3],['parts',.1],['water',.2]]},
   cinema:{n:'매점',t:[['ramen',.5],['water',.5],['cloth',.3],['can',.1]]},
-  apparel:{n:'옷 진열대',t:[['cloth',.8],['cloth',.5],['tape',.1]]}
+  apparel:{n:'옷 진열대',t:[['cloth',.8],['cloth',.5],['tape',.1]]},
+  mil:{n:'군 보급 상자',t:[['can',.4],['water',.4],['bandage',.4],['anti',.2],['tape',.35],['parts',.35],['pipe',.1],['axe',.08]]},
+  train:{n:'열차 칸',t:[['water',.4],['cloth',.4],['parts',.35],['bandage',.15],['can',.15],['tape',.15]]}
 };
 const ZT={
   walker:{n:'배회자',hp:30,dmg:9,spd:30,chase:54,sight:170,body:'#6f7a5e',head:'#a3ad8c'},
@@ -221,7 +223,7 @@ function pool(list){let a=[];return ()=>{if(!a.length){a=list.slice();for(let i=
 function gen(seed){
   R=mulberry32(seed);
   tile.fill(3);solid.fill(0);sightB.fill(0);mk.fill(0);resv.fill(0);
-  buildings=[];cars=[];trees=[];conts=[];decals=[];exits=[];
+  buildings=[];cars=[];trees=[];conts=[];decals=[];exits=[];links=[];ZLABELS=[];
   const road=new Uint8Array(MW*MH);
   for(const r of ROADS)for(let y=r.y;y<r.y+r.h;y++)for(let x=r.x;x<r.x+r.w;x++){const i=y*MW+x;tile[i]=0;road[i]=1}
   for(const [ax,ay,aw,ah] of ALLEYS)for(let y=ay;y<ay+ah;y++)for(let x=ax;x<ax+aw;x++){const i=y*MW+x;if(!road[i]){tile[i]=3;road[i]=2}}
@@ -291,8 +293,9 @@ function gen(seed){
     }
   }
   // 지하철 출구
-  for(const [x,y,n,s] of [[34,72,'10',1],[45,72,'11',1],[34,84,'9',1],[45,84,'1',1],[34,14,'6',0],[45,14,'5',0],[34,24,'7',0],[45,24,'4',0]]){
+  for(const [x,y,n,s] of EXIT_DEF){
     if(!freeRect(x,y,1,2))continue;exits.push({x,y,n,st:STATIONS[s]});setSolid(x,y,1,2,0);
+    const ly=solid[(y+2)*MW+x]?y-1:y+2;links.push({id:'g'+n,x,y:ly,to:'subway',dest:'s'+n,label:`${STATIONS[s].n} ${n}번 출구 · 지하로`,arrow:'▼'});
   }
   // 가로수 (강남대로 보도)
   for(const x of [35,44])for(let y=2;y<MH-2;y+=4){const i=y*MW+x;if(tile[i]!==1||solid[i]||solid[i-1]||solid[i+1]||resv[i])continue;trees.push({x:(x+.5)*T,y:(y+.5)*T,s:.8+R()*.3});solid[i]=1}
@@ -340,7 +343,7 @@ function addBuilding(x,y,w,h,front,pickChain,pickAlley,pickOffice){
 let STREET=null;
 const IN_OX=10,IN_OY=10,IN_H=11;
 // tile: 5 바닥 6 벽 7 바깥(어둠) 8 위층 계단 9 아래층 계단 10 출구
-const IN_STYLE={villa:['#6e5a44','#695540','#735f49'],office:['#565d64','#525960','#5b6269'],shop:['#8a877e','#85827a','#8f8c83'],food:['#74624d','#6f5d49','#796752']};
+const IN_STYLE={under:['#5b5852','#57544e','#5f5c56'],villa:['#6e5a44','#695540','#735f49'],office:['#565d64','#525960','#5b6269'],shop:['#8a877e','#85827a','#8f8c83'],food:['#74624d','#6f5d49','#796752']};
 const LOOK={mart:'shelf',hard:'shelf',elec:'shelf',book:'shelf',apparel:'shelf',cinema:'shelf',beauty:'shelf',cafe:'fridge',fast:'fridge',meat:'fridge',bar:'fridge',office:'desk',bank:'desk',villa:'cabinet',clinic:'cabinet',pharm:'cabinet'};
 function floorsOf(b){
   if(b.home)return 0;
@@ -443,7 +446,13 @@ function drawInTile(x,y,t,h){
     const below=tile[(y+1)*MW+x];if(below===5||below>=8){ctx.fillStyle='#6b6257';ctx.fillRect(X,Y+T-14,T+.5,14);ctx.fillStyle='rgba(0,0,0,.25)';ctx.fillRect(X,Y+T-2,T+.5,2)}
     return;
   }
-  ctx.fillStyle=IN_STYLE[G.area.style][h*3|0];ctx.fillRect(X,Y,T+.5,T+.5);
+  if(t===11){ctx.fillStyle=['#1f3a4d','#1d384a','#223d50'][h*3|0];ctx.fillRect(X,Y,T+.5,T+.5);const o=(performance.now()/900+x*.3+y*.7)%1;ctx.fillStyle='rgba(160,200,220,.12)';ctx.fillRect(X+4,Y+o*28,16,2);return}
+  if(t===12){ctx.fillStyle=['#3b3631','#37322d','#3f3a35'][h*3|0];ctx.fillRect(X,Y,T+.5,T+.5);ctx.fillStyle='#5a4a3a';const v=mk[y*MW+x]&1;
+    if(v){for(let k=2;k<T;k+=8)ctx.fillRect(X+4,Y+k,T-8,3);ctx.fillStyle='#8b8f94';ctx.fillRect(X+8,Y,2,T+.5);ctx.fillRect(X+T-10,Y,2,T+.5)}
+    else{for(let k=2;k<T;k+=8)ctx.fillRect(X+k,Y+4,3,T-8);ctx.fillStyle='#8b8f94';ctx.fillRect(X,Y+8,T+.5,2);ctx.fillRect(X,Y+T-10,T+.5,2)}return}
+  if(t===15||t===16){ctx.fillStyle=t===15?'#8a8680':'#7a6a4a';ctx.fillRect(X,Y,T+.5,T+.5);ctx.fillStyle=t===15?'#a9a59e':'#9a8660';ctx.fillRect(X,Y,T+.5,8);if(t===16){ctx.fillStyle='rgba(0,0,0,.2)';ctx.fillRect(X,Y+15,T,2)}return}
+  ctx.fillStyle=IN_STYLE[curStyle()][h*3|0];ctx.fillRect(X,Y,T+.5,T+.5);
+  if(t===13){ctx.fillStyle='#e6c34a';for(let k=2;k<T;k+=6)ctx.fillRect(X+k,Y+13,3,6)}
   ctx.fillStyle='rgba(0,0,0,.12)';ctx.fillRect(X,Y+(x%2?10:22),T,1);
   if(t===8||t===9){
     ctx.fillStyle='#3d3833';ctx.fillRect(X+2,Y+2,T-4,T-4);ctx.fillStyle='#8a8070';for(let k=0;k<4;k++)ctx.fillRect(X+4,Y+5+k*6,T-8,3);
@@ -491,7 +500,7 @@ function placeSurvivors(){
 }
 const crew=()=>SURV_ORDER.filter(id=>G.surv&&G.surv[id]&&G.surv[id].st!=='lost');
 const hinted=id=>SURV_ORDER.indexOf(id)<G.day;
-const survBuilding=s=>(G.area?STREET.buildings:buildings).find(b=>b.x===s.bx&&b.y===s.by);
+const survBuilding=s=>(G.zone!=='gangnam'?(ZC.gangnam?ZC.gangnam.buildings:[]):G.area?STREET.buildings:buildings).find(b=>b.x===s.bx&&b.y===s.by);
 const bagCap=()=>BAG_CAP+((ALLY&&ALLY.id==='doyun')||(G.state==='base'&&G.follow==='doyun')?6:0);
 const searchTime=()=>ALLY&&ALLY.id==='yuna'?.87:1.3;
 function placeNpcs(L){
@@ -597,11 +606,191 @@ function allyTab(){
   return `<div class="mats">동료 <b>${crew().length}/5</b> · 동료는 잘 때 먹을 것 1·물 1씩 먹는다 · 밖에는 한 명만 데려간다</div><div class="list">${rows}</div>`;
 }
 
+/* ───────── 구역 ─────────
+   강남역 거리 → (지하철 출구) 지하상가·선로 → (북쪽 선로) 한남대교 → (북단) 남산. 거점은 강남에만 있다.
+   지금 구역의 배열·목록은 전역(tile, buildings, conts, Z…)에 있고, 떠난 구역은 ZC[id]에 보관한다.
+   links: 구역을 잇는 지점 {id,x,y,to,dest,label,arrow}. to:'final'은 남산 송신기. */
+let links=[],ZLABELS=[],ZC={};
+const ZONES={
+  gangnam:{n:'강남역 일대'},
+  subway:{n:'강남역 지하상가·선로',dark:true,style:'under',back:'gangnam',zn:26,zd:6},
+  bridge:{n:'한남대교',back:'subway',zn:30,zd:7,run:.3},
+  namsan:{n:'남산',back:'bridge',zn:24,zd:6}
+};
+const EXIT_DEF=[[34,72,'10',1],[45,72,'11',1],[34,84,'9',1],[45,84,'1',1],[34,14,'6',0],[45,14,'5',0],[34,24,'7',0],[45,24,'4',0]];
+const curStyle=()=>G.area?G.area.style:(ZONES[G.zone].style||'shop');
+function zrng(id){return mulberry32((G.seed^({subway:0x9e37,bridge:0x7f4a,namsan:0x3c6e}[id]*40503))>>>0)}
+function zBlank(t){tile.fill(t);const s=t===7||t===11;solid.fill(s?1:0);sightB.fill(t===7?1:0);mk.fill(0);resv.fill(0);buildings=[];cars=[];trees=[];conts=[];decals=[];exits=[];links=[];ZLABELS=[]}
+const SOLID_T=new Set([6,7,11,15,16]);
+function zSet(x,y,w,h,t){for(let j=y;j<y+h;j++)for(let i=x;i<x+w;i++){if(i<0||j<0||i>=MW||j>=MH)continue;const k=j*MW+i;tile[k]=t;solid[k]=SOLID_T.has(t)?1:0;sightB[k]=(t===6||t===7)?1:0}}
+function zBuild(o){const b=Object.assign({floors:0,face:'#8e8a80',door:{x:o.x+(o.w>>1),y:o.y+o.h}},o);if(tile[b.y*MW+b.x]===2)zSet(b.x-1,b.y,b.w+2,b.h+1,1);buildings.push(b);setSolid(b.x,b.y,b.w,b.h,1);if(b.loot&&b.loot!=='none')addCont(b.door.x-1,b.door.y,b.loot,{label:b.name});return b}
+function zVeh(x,y,w,h,o){for(let j=y;j<y+h;j++)for(let i=x;i<x+w;i++){const k=j*MW+i;if(solid[k]||tile[k]===11)return null}
+  const c=Object.assign({x,y,w,h,horiz:w>h,col:['#5a6470','#7a4b45','#6d6f5a','#8c8c88','#3f4752','#a8a49a'][R()*6|0],alarm:false,fired:false},o||{});
+  cars.push(c);setSolid(x,y,w,h,0);conts.push({x:(x+w/2)*T,y:(y+h/2)*T,type:c.train?'train':c.mil?'mil':c.bus?'bus':'trunk',car:c,loot:null,empty:false,reach:c.train?70:c.bus?60:46});return c}
+function thick(pts,rad,t){for(let s=0;s<pts.length-1;s++){const [ax,ay]=pts[s],[bx,by]=pts[s+1],n=Math.ceil(hyp(bx-ax,by-ay)*3);
+  for(let i=0;i<=n;i++){const x=Math.round(lerp(ax,bx,i/n)),y=Math.round(lerp(ay,by,i/n));zSet(x-rad,y-rad,rad*2+1,rad*2+1,t)}}}
+function pruneUnreachable(){const a=links[0];const D=bfs((a.x+.5)*T,(a.y+.5)*T);
+  conts=conts.filter(c=>{if(c.car){const k=c.car;for(let j=k.y-1;j<=k.y+k.h;j++)for(let i=k.x-1;i<=k.x+k.w;i++)if(i>=0&&j>=0&&i<MW&&j<MH&&D[j*MW+i]>=0)return true;return false}return D[(c.y/T|0)*MW+(c.x/T|0)]>=0})}
+function linkOk(){const a=links[0];const D=bfs((a.x+.5)*T,(a.y+.5)*T);return links.every(l=>D[l.y*MW+l.x]>=0)}
+
+function genSubway(){
+  R=zrng('subway');zBlank(7);
+  zSet(24,8,36,85,6);zSet(33,10,14,80,5);
+  const SH=[['지하 패션 12호','apparel'],['폰월드','elec'],['미셔 화장품','beauty'],['지하분식','fast'],['꽃다발 꽃집','villa'],['지하 패션 27호','apparel'],['양말천국','apparel'],['안경나라','elec'],['GS52 지하점','mart'],['약손약국','pharm']];
+  let k=0;
+  for(let y=28;y<66;y+=6)for(const [x,ox] of [[26,32],[48,47]]){
+    zSet(x,y,6,5,5);zSet(ox,y+2,1,1,5);const s=SH[k++%SH.length];
+    addCont(x+1+(R()*4|0),y+1+(R()*3|0),s[1],{label:s[0],look:LOOK[s[1]]});if(R()<.4)addCont(x+1+(R()*4|0),y+1+(R()*3|0),s[1],{label:s[0],look:LOOK[s[1]]});
+    ZLABELS.push({x:x+3,y:y+.2,t:s[0],s:11,c:'rgba(255,220,150,.75)'});
+  }
+  // 강남역 2호선 승강장, 신논현역 9호선 승강장
+  zSet(6,72,72,15,5);zSet(2,78,80,3,12);zSet(6,77,72,1,13);zSet(6,81,72,1,13);
+  zSet(10,13,64,12,5);zSet(2,18,80,3,12);zSet(10,17,64,1,13);zSet(10,21,64,1,13);
+  for(let x=33;x<=46;x+=2){zSet(x,70,1,1,15);zSet(x,26,1,1,15)}
+  // 북쪽 선로(한강 방면)
+  zSet(39,1,5,17,6);zSet(40,1,3,17,12);for(let y=1;y<17;y++)for(let x=40;x<43;x++)mk[y*MW+x]|=1;
+  zVeh(10,78,12,3,{train:true,col:'#3cb44a',label:'2호선 열차'});zVeh(52,78,12,3,{train:true,col:'#3cb44a',label:'2호선 열차'});zVeh(54,18,10,3,{train:true,col:'#bfa86a',label:'9호선 열차'});
+  for(const [x,y,n] of EXIT_DEF){const lx=x===34?33:46;links.push({id:'s'+n,x:lx,y,to:'gangnam',dest:'g'+n,label:`${n}번 출구 · 거리로`,arrow:'▲'})}
+  links.push({id:'sn',x:41,y:2,to:'bridge',dest:'bs',label:'북쪽 선로 끝 · 한남대교로',arrow:'▲'});
+  for(let i=0;i<14;i++){const x=8+(R()*68|0),y=R()<.5?73+(R()*3|0):83+(R()*3|0);if(!solid[y*MW+x])addCont(x,y,'bin')}
+  pruneUnreachable();
+  ZLABELS.push({x:40,y:75,t:'강남역 2호선 승강장',s:20},{x:40,y:15.2,t:'신논현역 9호선 승강장',s:20},{x:40,y:45,t:'강남역 지하상가',s:22},{x:41.5,y:5,t:'한강 방면 ↑',s:14});
+  R=Math.random;
+}
+function genBridge(){
+  R=zrng('bridge');zBlank(11);
+  zSet(1,84,82,15,2);zSet(1,89,82,2,1);zSet(39,84,6,15,1);
+  zSet(1,1,82,13,1);zSet(1,4,82,4,0);for(let x=1;x<83;x++){mk[5*MW+x]|=8}
+  zSet(31,13,1,71,15);zSet(52,13,1,71,15);zSet(32,13,20,71,0);
+  for(let y=13;y<84;y++)for(let x=33;x<52;x++)mk[y*MW+x]|=(x===42?4:1);
+  zSet(32,46,18,7,11);zSet(50,46,2,7,1);
+  for(let x=32;x<52;x++)if(x<40||x>43)zSet(x,15,1,1,16);
+  zBuild({x:12,y:8,w:6,h:3,name:'검문소 막사',kind:'shop',col:'#4d5a32',H:60,loot:'mil'});
+  zBuild({x:62,y:8,w:6,h:3,name:'GS52 한남점',kind:'shop',col:'#2f7fc1',H:70,loot:'mart'});
+  zBuild({x:14,y:92,w:6,h:3,name:'한강공원 매점',kind:'shop',col:'#c99a05',H:60,loot:'mart'});
+  zBuild({x:60,y:92,w:6,h:3,name:'따릉이 대여소',kind:'shop',col:'#3aa346',H:50,loot:'hard'});
+  for(let i=0;i<6;i++){const x=34+(R()*16|0);addCont(x,16+(R()*2|0),'mil')}
+  links.push({id:'bs',x:41,y:96,to:'subway',dest:'sn',label:'지하 선로 · 강남 방면',arrow:'▼'},{id:'bn',x:41,y:2,to:'namsan',dest:'ns',label:'한남동 · 남산 오르는 길',arrow:'▲'});
+  for(let n=0,k=0;n<52&&k<800;k++){const x=32+(R()*20|0),y=17+(R()*64|0);if(zVeh(x,y,1,2))n++}
+  for(let n=0,k=0;n<4&&k<200;k++){if(zVeh(33+(R()*17|0),18+(R()*60|0),1,3,{bus:true,col:['#3d6fd6','#3aa346','#d63a3a'][R()*3|0]}))n++}
+  for(let n=0,k=0;n<3&&k<200;k++){if(zVeh(34+(R()*14|0),17+(R()*6|0),1,2,{mil:true,col:'#4d5a32'}))n++}
+  // 길이 막히면 차를 치운다
+  while(!linkOk()&&cars.length){const c=cars.splice(R()*cars.length|0,1)[0];for(let j=c.y;j<c.y+c.h;j++)for(let i=c.x;i<c.x+c.w;i++)solid[j*MW+i]=0;conts=conts.filter(k=>k.car!==c)}
+  for(let i=0;i<30;i++){const x=2+(R()*80|0),y=85+(R()*13|0),k=y*MW+x;if(tile[k]===2&&!solid[k]&&Math.abs(x-41)>4){trees.push({x:(x+.5)*T,y:(y+.5)*T,s:.8+R()*.3});solid[k]=1}}
+  for(let i=0;i<10;i++){const x=34+(R()*16|0),y=20+(R()*60|0);if(!solid[y*MW+x])decals.push({x:(x+.5)*T,y:(y+.5)*T,r:8+R()*14,a:R()*6})}
+  pruneUnreachable();
+  ZLABELS.push({x:42,y:30,t:'한남대교',s:24},{x:15,y:40,t:'한 강',s:30},{x:68,y:60,t:'한 강',s:30},{x:42,y:44,t:'⚠ 붕괴 — 오른쪽 점검로',s:13},{x:42,y:14.6,t:'군 검문소',s:13});
+  R=Math.random;
+}
+function genNamsan(){
+  R=zrng('namsan');zBlank(2);
+  thick([[41,97],[60,86],[24,72],[58,57],[27,42],[50,28],[42,18]],1,0);
+  thick([[44,95],[45,62],[35,48],[40,20]],0,1);
+  zSet(24,3,36,16,1);
+  zBuild({x:37,y:5,w:8,h:7,name:'남산서울타워',kind:'tower',col:'#7a5a3a',H:420,loot:'cafe'});
+  const tx=zBuild({x:50,y:6,w:6,h:4,name:'KBC 남산 송신소',kind:'shop',col:'#3a5a8a',H:110,loot:'none'});
+  zBuild({x:27,y:7,w:5,h:3,name:'팔각정 매점',kind:'shop',col:'#8c2f1f',H:60,loot:'fast'});
+  zBuild({x:6,y:40,w:6,h:3,name:'남산 케이블카',kind:'shop',col:'#c0392b',H:70,loot:'mart'});thick([[9,43],[26,42]],0,1);
+  for(let i=0;i<5;i++)addCont(26+(R()*32|0),14+(R()*4|0),R()<.5?'mil':'bin');
+  links.push({id:'ns',x:41,y:97,to:'bridge',dest:'bn',label:'한남대교로 내려가기',arrow:'▼'},{id:'tx',x:tx.door.x,y:tx.door.y,to:'final',label:'송신기 · 구조 신호',arrow:'📡'});
+  for(let n=0,k=0;n<3&&k<300;k++){const p=[[60,86],[24,72],[58,57],[27,42]][n%4];if(zVeh(p[0]-1,p[1]-1,1,3,{bus:true,col:'#d8691c'}))n++}
+  for(let y=1;y<MH-1;y++)for(let x=1;x<MW-1;x++){const k=y*MW+x;if(tile[k]!==2||solid[k]||R()>.2)continue;
+    let near=false;for(let j=-1;j<=1;j++)for(let i=-1;i<=1;i++)if(tile[(y+j)*MW+x+i]!==2)near=true;if(near)continue;
+    trees.push({x:(x+.5)*T,y:(y+.5)*T,s:.85+R()*.4});solid[k]=1}
+  pruneUnreachable();
+  ZLABELS.push({x:41,y:16,t:'남산 정상',s:20},{x:52,y:84,t:'남산순환로',s:16});
+  R=Math.random;
+}
+function zoneGen(id){
+  if(id==='gangnam')gen(G.seed);else if(id==='subway')genSubway();else if(id==='bridge')genBridge();else genNamsan();
+  R=Math.random;
+  const sv=G.zoneSave&&G.zoneSave[id];
+  if(sv){sv.conts.forEach((s,i)=>{const c=conts[i];if(c){c.empty=!!s[0];c.loot=s[1]}});sv.cars.forEach((f,i)=>{if(cars[i])cars[i].fired=!!f})}
+}
+function stashZone(){ZC[G.zone]={tile:tile.slice(),solid:solid.slice(),sightB:sightB.slice(),mk:mk.slice(),buildings,cars,trees,conts,decals,exits,links,ZLABELS,Z,day:G.day}}
+function restoreZone(c){tile.set(c.tile);solid.set(c.solid);sightB.set(c.sightB);mk.set(c.mk);({buildings,cars,trees,conts,decals,exits,links,ZLABELS}=c)}
+function spawnZone(id){
+  if(id==='gangnam'){spawnDay();Z=Z.filter(z=>hyp(z.x-P.x,z.y-P.y)>8*T);return}
+  Z=[];const d=ZONES[id],n=d.zn+G.day*d.zd;let k=0;
+  while(Z.length<n&&k++<5000){const tx=1+(R()*(MW-2)|0),ty=1+(R()*(MH-2)|0);if(!walk(tx,ty)||hyp((tx+.5)*T-P.x,(ty+.5)*T-P.y)<10*T)continue;spawnZ((tx+.5)*T,(ty+.5)*T,d.run&&R()<d.run?'runner':undefined)}
+}
+function nearLink(){if(G.area)return null;let b=null,bd=34;for(const l of links){const d=hyp(P.x-(l.x+.5)*T,P.y-(l.y+.5)*T);if(d<bd){bd=d;b=l}}return b}
+function travel(l){
+  if(l.to==='final'){finalAsk(l);return}
+  if(G.final){G.final=null;toast('송신이 끊겼다','red')}
+  P.search=null;stashZone();
+  const id=l.to,c=ZC[id];
+  if(c)restoreZone(c);else zoneGen(id);
+  G.zone=id;
+  const t=links.find(k=>k.id===l.dest);P.x=(t.x+.5)*T;P.y=(t.y+.5)*T;
+  if(c&&c.day===G.day)Z=c.Z;else spawnZone(id);
+  noises=[];thrown=[];alarms=[];flowD=null;flowT=0;NPCS=[];
+  if(ALLY){ALLY.x=P.x;ALLY.y=P.y}
+  toast(ZONES[id].n,'gold');
+  if(id==='subway'&&!G.seenSub){G.seenSub=1;toast('북쪽 선로 끝을 따라가면 한강이 나온다','')}
+  if(id==='namsan'&&!G.seenNam){G.seenNam=1;toast('정상의 송신소에서 구조 신호를 보낼 수 있다','')}
+  saveGame();
+}
+/* 마지막: 남산 송신소 */
+function finalNeed(){const y=G.surv&&G.surv.yuna&&G.surv.yuna.st!=='lost';return y?{parts:3,tape:1}:{parts:5,tape:2}}
+function finalAsk(l){
+  if(G.final)return;
+  const need=finalNeed(),ok=Object.entries(need).every(([k,v])=>(P.bag[k]||0)>=v);
+  G.state='talk';P.search=null;
+  const yuna=G.surv&&G.surv.yuna&&G.surv.yuna.st!=='lost';
+  $('#modal').innerHTML=`<div class="win"><div class="whead"><div><h2>KBC 남산 송신소</h2><small>남산 정상</small></div></div><div class="wbody">
+    <div class="list"><div class="it">송신기는 살아 있다. 끊어진 배선과 부서진 부품만 고치면 구조 신호를 보낼 수 있다.</div>
+    <div class="it">신호를 보내는 90초 동안 소리를 듣고 좀비가 몰려온다. 송신소 곁(빛 원 안)을 지켜야 한다.</div></div>
+    <p style="margin:8px 0 0">필요(가방): ${Object.entries(need).map(([k,v])=>`<span class="${(P.bag[k]||0)<v?'no':''}">${ITEMS[k].ic}${ITEMS[k].n} ${P.bag[k]||0}/${v}</span>`).join(' ')}</p>
+    <p style="color:var(--dim);font-size:12px;margin:4px 0 0">${yuna?'유나가 배선을 맡아 부품이 덜 든다.':'기계를 잘 아는 동료가 있으면 부품이 덜 든다.'}</p></div>
+    <div class="wfoot"><button onclick="talkEnd()">나중에</button><button class="pri" ${ok?'':'disabled'} onclick="finalStart()">고치고 송신 시작</button></div></div>`;
+  $('#modal').classList.add('on');
+}
+function finalStart(){
+  const need=finalNeed();for(const k in need)take(P.bag,k,need[k]);
+  const l=links.find(k=>k.id==='tx');G.final={p:0,sp:1,x:(l.x+.5)*T,y:(l.y+.5)*T};
+  talkEnd();toast('📡 송신 시작! 송신소 곁을 90초 지켜라','red');noise(G.final.x,G.final.y,900,1,'255,140,90');
+}
+function finalTick(dt){
+  const f=G.final;if(!f||G.zone!=='namsan')return;
+  const near=hyp(P.x-f.x,P.y-f.y)<6*T;
+  if(near)f.p+=dt/90;
+  f.sp-=dt;if(f.sp<=0){f.sp=1.6;for(let i=0;i<2;i++)for(let k=0;k<30;k++){const a=R()*Math.PI*2,d=480+R()*260,x=f.x+Math.cos(a)*d,y=f.y+Math.sin(a)*d;if(!walk(x/T|0,y/T|0))continue;spawnZ(x,y,R()<.3?'runner':undefined);const z=Z[Z.length-1];z.state='inv';z.goal={x:f.x,y:f.y,D:null};break}}
+  if(f.p>=1){G.final=null;winFinal()}
+}
+function drawFinal(){
+  const f=G.final;if(!f||G.zone!=='namsan')return;
+  const pulse=.5+.5*Math.sin(performance.now()/300);
+  ctx.fillStyle=`rgba(255,140,90,${.06+.04*pulse})`;ctx.beginPath();ctx.ellipse(f.x,f.y,6*T,6*T*.7,0,0,7);ctx.fill();
+  ctx.strokeStyle=`rgba(255,160,100,${.5+.3*pulse})`;ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(f.x,f.y,6*T,6*T*.7,0,0,7);ctx.stroke();
+}
+function drawFinalBar(){
+  const f=G.final;if(!f||G.zone!=='namsan')return;
+  const w=Math.min(300,W-40),x=(W-w)/2,y=H-(document.body.classList.contains('touch')?Math.min(250,H*.42):90),near=hyp(P.x-f.x,P.y-f.y)<6*T;
+  ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(x-6,y-22,w+12,36);ctx.fillStyle='#3a2a20';ctx.fillRect(x,y,w,8);ctx.fillStyle='#ff8a5a';ctx.fillRect(x,y,w*f.p,8);
+  ctx.fillStyle=near?'#ffd2b8':'#ff6b5a';ctx.font='bold 12px sans-serif';ctx.textAlign='center';ctx.fillText(near?`📡 구조 신호 송신 ${Math.floor(f.p*100)}%`:'⚠ 송신소에서 멀어졌다 — 송신이 멈췄다',W/2,y-7);
+}
+function winFinal(){
+  G.state='over';clearSave();$('#modal').classList.remove('on');
+  const c=crew().map(id=>SURV[id].n);
+  showScreen(`<div class="win big"><h1>구조 신호</h1><p>잡음 너머로 목소리가 돌아왔다.<br>“…남산 송신소, 신호 확인. 해 뜨면 헬기 간다. 버텨라.”</p><p>${G.day}일째 새벽, 남산 위로 프로펠러 소리가 들렸다.${c.length?`<br>함께 탄 사람: ${c.join(', ')}`:''}</p><p style="color:var(--accent)">생존 ${G.day}일 · 처치 ${G.kills} · 동료 ${c.length}/5</p><button class="btn pri" onclick="newGame()">처음부터 다시</button><button class="btn" onclick="titleScreen()">처음 화면으로</button></div>`);
+}
+function drawLinks(){
+  for(const l of links){const X=(l.x+.5)*T,Y=(l.y+.5)*T;if(!onScreen(X,Y))continue;
+    const p=.5+.5*Math.sin(performance.now()/350+l.x);
+    ctx.fillStyle='rgba(0,0,0,.55)';ctx.beginPath();ctx.ellipse(X,Y,22,13,0,0,7);ctx.fill();
+    ctx.strokeStyle=l.to==='final'?`rgba(255,140,90,${.5+.4*p})`:`rgba(255,215,106,${.4+.4*p})`;ctx.lineWidth=2;ctx.stroke();
+    ctx.textAlign='center';ctx.font='bold 15px sans-serif';ctx.fillStyle=l.to==='final'?'#ff9a6a':'#ffd76a';ctx.fillText(l.arrow,X,Y+5);
+    ctx.font='bold 11px sans-serif';const w=ctx.measureText(l.label).width+10;ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillRect(X-w/2,Y-34,w,16);ctx.fillStyle='#ffe9b0';ctx.fillText(l.label,X,Y-22);
+  }
+}
+function drawZLabels(){ctx.textAlign='center';for(const l of ZLABELS){ctx.font=`bold ${l.s}px sans-serif`;ctx.fillStyle=l.c||'rgba(235,235,225,.22)';ctx.fillText(l.t,l.x*T,l.y*T+l.s*.4)}}
+
 /* ───────── 상태 ───────── */
 let G=null,P=null,Z=[],noises=[],fx=[],thrown=[],alarms=[];
 let flowD=null,flowT=0,shake=0,toastCD={};
 function newGame(){
-  G={day:1,t:0,state:'field',seed:(Math.random()*1e9)|0,stash:{water:2,can:2,cloth:1},fac:{rain:0,garden:0,barr:0},kills:0,spT:0,tab:'stat',floors:{},area:null};STREET=null;
+  G={day:1,t:0,state:'field',seed:(Math.random()*1e9)|0,stash:{water:2,can:2,cloth:1},fac:{rain:0,garden:0,barr:0},kills:0,spT:0,tab:'stat',floors:{},area:null,zone:'gangnam',final:null};STREET=null;ZC={};
   gen(G.seed);placeSurvivors();ALLY=null;NPCS=[];
   P={x:(HOME_TILE.x+.5)*T,y:(HOME_TILE.y+.8)*T,r:10,fx:0,fy:1,hp:100,food:80,water:80,inf:0,weapon:{id:'pipe',dur:22},bag:{water:1,can:1},atkCd:0,hurt:0,run:false,search:null,stepT:0,swing:0,ph:0};
   Z=[];noises=[];fx=[];thrown=[];alarms=[];
@@ -752,12 +941,12 @@ function killZ(z){
   G.kills++;decals.push({x:z.x,y:z.y,r:12+R()*8,a:R()*6});
   if(R()<.12&&bagCount()<bagCap()){const id=['cloth','scrap','tape','parts'][R()*4|0];addTo(P.bag,id);fx.push({k:'txt',x:z.x,y:z.y-40,vx:0,vy:-30,t:0,life:1,txt:'+'+ITEMS[id].n,col:'#c6efb8'})}
 }
-function nearHome(){return hyp(P.x-(HOME_TILE.x+.5)*T,P.y-(HOME_TILE.y+.5)*T)<48}
+function nearHome(){return G.zone==='gangnam'&&!G.area&&hyp(P.x-(HOME_TILE.x+.5)*T,P.y-(HOME_TILE.y+.5)*T)<48}
 function nearCont(){let b=null,bd=1e9;for(const c of conts){const d=hyp(c.x-P.x,c.y-P.y);if(d<(c.reach||36)&&d<bd){b=c;bd=d}}return b}
 function interact(){
   if(P.search)return;
   if(G.area){const n=nearNpc();if(n){talkTo(n);return}const t=inTile();if(t){useStairs(t);return}}
-  else{if(nearHome()){openBase();return}const db=doorBuilding();if(db){enterFloor(db,1,false);return}}
+  else{if(nearHome()){openBase();return}const l=nearLink();if(l){travel(l);return}const db=doorBuilding();if(db){enterFloor(db,1,false);return}}
   const c=nearCont();if(!c)return;
   if(c.empty){toast(`${LOOT[c.type].n}: 이미 뒤졌다`,'','empty');return}
   P.search={c,t:0};noise(P.x,P.y,70,1);
@@ -834,7 +1023,7 @@ function update(dt){
   flowT-=dt;if(flowT<=0||!flowD){flowD=bfs(P.x,P.y);flowT=.35}
   // 좀비
   for(const z of Z)updateZ(z,dt,night);
-  allyUpdate(dt);
+  allyUpdate(dt);finalTick(dt);
   for(let i=0;i<Z.length;i++)for(let j=i+1;j<Z.length;j++){
     const a=Z[i],b=Z[j],dx=b.x-a.x,dy=b.y-a.y,d=hyp(dx,dy);
     if(d>0&&d<22){const p=(22-d)/2,ux=dx/d,uy=dy/d;move(a,-ux*p,-uy*p);move(b,ux*p,uy*p)}
@@ -1023,54 +1212,59 @@ function sleep(){
   crewMorning(fed,log);
   G.day++;G.t=0;G.warned=G.warn0=0;G.spT=0;
   for(const c of conts)if(c.empty&&R()<.3){c.empty=false;c.loot=null}
+  for(const id in ZC)if(id!==G.zone)for(const c of ZC[id].conts)if(c.empty&&R()<.3){c.empty=false;c.loot=null}
   for(const k in G.floors){const f=G.floors[k];f.Z=null;if(f.conts)for(const c of f.conts)if(c.empty&&R()<.3){c.empty=false;c.loot=null}}
   for(const car of cars)car.fired=false;
   noises=[];thrown=[];alarms=[];fx=[];
   spawnDay();
   if(P.hp<=0){gameOver('hp');return}
   if(P.inf>=100){gameOver('inf');return}
-  if(G.day>WIN_DAY){win();return}
   saveGame();
   const m=$('#modal');
-  m.innerHTML=`<div class="win"><div class="whead"><div><h2>${day}일차 밤이 지났다</h2><small>${G.day}일차 아침 06:00</small></div></div><div class="wbody"><div class="list">${[`배고픔 −${hunger} · 갈증 −25 · 체력 +${heal}`,...log].map(s=>`<div class="it">${s}</div>`).join('')}</div>${G.day===WIN_DAY?'<p style="color:var(--accent)">오늘을 버티면 7일째 밤이 끝난다.</p>':''}</div><div class="wfoot"><button class="pri" onclick="renderBase()">확인</button></div></div>`;
+  m.innerHTML=`<div class="win"><div class="whead"><div><h2>${day}일차 밤이 지났다</h2><small>${G.day}일차 아침 06:00</small></div></div><div class="wbody"><div class="list">${[`배고픔 −${hunger} · 갈증 −25 · 체력 +${heal}`,...log].map(s=>`<div class="it">${s}</div>`).join('')}</div></div><div class="wfoot"><button class="pri" onclick="renderBase()">확인</button></div></div>`;
   m.classList.add('on');
 }
 
 /* ───────── 저장·불러오기 ─────────
    브라우저 localStorage 한 칸. 지도는 seed로 다시 만들고, 바뀐 것(창고·가방·뒤진 상자·경보 울린 차·층별 상자)만 저장한다.
-   좀비 위치는 저장하지 않는다(불러오면 그날 수만큼 다시 퍼진다). 죽거나 7일을 버티면 저장을 지운다. */
+   좀비 위치는 저장하지 않는다(불러오면 그날 수만큼 다시 퍼진다). 죽거나 구조 신호를 보내면 저장을 지운다.
+   v2: 구역마다 zones[id]={conts,cars}(인덱스 순서). v1 저장은 강남 하나로 읽는다. */
 const SAVE_KEY='seoul-survivor-save-v1';
-function readSave(){try{const d=JSON.parse(localStorage.getItem(SAVE_KEY));return d&&d.v===1?d:null}catch(e){return null}}
+function readSave(){try{const d=JSON.parse(localStorage.getItem(SAVE_KEY));return d&&(d.v===1||d.v===2)?d:null}catch(e){return null}}
 function clearSave(){try{localStorage.removeItem(SAVE_KEY)}catch(e){}}
+function zoneLists(id){
+  if(id===G.zone)return G.area?STREET:{conts,cars};
+  return ZC[id]||null;
+}
 function saveGame(){
   if(!G||G.state==='over'||!P)return false;
   try{
     if(G.area)saveFloor();
-    const sc=G.area?STREET.conts:conts,scar=G.area?STREET.cars:cars;
     const floors=Object.assign({},G.floorSave||{});
     for(const k in G.floors){const f=G.floors[k];if(f.conts)floors[k]=f.conts.map(c=>[c.empty?1:0,c.loot])}
-    const d={v:1,at:Date.now(),
-      G:{day:G.day,t:G.t,seed:G.seed,stash:G.stash,fac:G.fac,kills:G.kills,warned:G.warned||0,warn0:G.warn0||0,surv:G.surv,follow:G.follow||null},
+    const zones=Object.assign({},G.zoneSave||{});
+    for(const id in ZONES){const L=zoneLists(id);if(L)zones[id]={conts:L.conts.map(c=>[c.empty?1:0,c.loot]),cars:L.cars.map(c=>c.fired?1:0)}}
+    const d={v:2,at:Date.now(),
+      G:{day:G.day,t:G.t,seed:G.seed,stash:G.stash,fac:G.fac,kills:G.kills,warned:G.warned||0,warn0:G.warn0||0,surv:G.surv,follow:G.follow||null,zone:G.zone,seenSub:G.seenSub||0,seenNam:G.seenNam||0},
       P:{x:P.x,y:P.y,fx:P.fx,fy:P.fy,hp:P.hp,food:P.food,water:P.water,inf:P.inf,weapon:{id:P.weapon.id,dur:P.weapon.id==='fist'?0:P.weapon.dur},bag:P.bag},
-      conts:sc.map(c=>[c.empty?1:0,c.loot]),cars:scar.map(c=>c.fired?1:0),floors,
-      area:G.area?{bx:G.area.b.x,by:G.area.b.y,f:G.area.f}:null,base:G.state==='base'};
+      zones,floors,area:G.area?{bx:G.area.b.x,by:G.area.b.y,f:G.area.f}:null,base:G.state==='base'};
     localStorage.setItem(SAVE_KEY,JSON.stringify(d));G.saveT=15;return true;
   }catch(e){return false}
 }
 function loadGame(){
   const d=readSave();if(!d){newGame();return}
   newGame();
-  Object.assign(G,d.G,{floors:{},area:null,floorSave:d.floors||{},saveT:15});
-  gen(G.seed);if(!d.G.surv)placeSurvivors();
-  d.conts.forEach((s,i)=>{const c=conts[i];if(c){c.empty=!!s[0];c.loot=s[1]}});
-  d.cars.forEach((f,i)=>{if(cars[i])cars[i].fired=!!f});
+  const zones=d.v===1?{gangnam:{conts:d.conts,cars:d.cars}}:d.zones;
+  Object.assign(G,d.G,{floors:{},area:null,floorSave:d.floors||{},zoneSave:zones||{},saveT:15,zone:'gangnam',final:null});
+  ZC={};zoneGen('gangnam');if(!d.G.surv)placeSurvivors();
   Object.assign(P,d.P,{bag:d.P.bag||{},search:null});
   if(P.weapon.id==='fist')P.weapon.dur=Infinity;
-  R=Math.random;spawnDay();
+  const zid=d.G.zone||'gangnam';
+  if(zid!=="gangnam"){Z=[];stashZone();ZC.gangnam.day=-1;zoneGen(zid);G.zone=zid}
+  spawnZone(G.zone);
   if(d.area){const b=buildings.find(b=>b.x===d.area.bx&&b.y===d.area.by);if(b){enterFloor(b,d.area.f,false);P.x=d.P.x;P.y=d.P.y}}
-  else Z=Z.filter(z=>hyp(z.x-P.x,z.y-P.y)>8*T);
   $('#toasts').innerHTML='';
-  toast(`${G.day}일차 ${clockText()} · 이어서 시작`,'gold');
+  toast(`${G.day}일차 ${clockText()} · ${ZONES[G.zone].n} · 이어서 시작`,'gold');
   if(d.base)openBase();else spawnAlly();
 }
 addEventListener('pagehide',()=>saveGame());
@@ -1080,18 +1274,14 @@ function showScreen(h){const s=$('#screen');s.innerHTML=h;s.classList.add('on')}
 function closeScreen(){$('#screen').classList.remove('on')}
 function titleScreen(){
   const sv=readSave();G=null;document.body.classList.remove('ingame');$('#modal').classList.remove('on');
-  showScreen(`<div class="win big"><h1>서울, 잔류자</h1><p>감염 40일째. 봉쇄된 서울 강남역.<br>먹자골목 안쪽 오피스텔 옥상에 거점을 차렸다. <b style="color:var(--accent)">7일</b>을 버티자.</p>
-  <div class="keys">• 낮에 강남역~신논현역 거리를 뒤져 식량·물·재료를 모은다<br>• 모든 행동은 <b>소리</b>를 낸다. 뛰거나 싸우면 좀비가 몰려온다<br>• <b style="color:#c9a6ff">비명꾼</b>을 먼저 잡아라 · 깜박이는 차는 경보가 울린다<br>• 밤이 되기 전 오피스텔 앞으로 돌아와 [뒤지기/E]로 들어간다</div>
+  showScreen(`<div class="win big"><h1>서울, 잔류자</h1><p>감염 40일째. 봉쇄된 서울 강남역.<br>먹자골목 안쪽 오피스텔 옥상에 거점을 차렸다.<br><b style="color:var(--accent)">남산 송신소에서 구조 신호를 보내자.</b></p>
+  <div class="keys">• 낮에 강남역~신논현역 거리를 뒤져 식량·물·재료를 모은다<br>• 모든 행동은 <b>소리</b>를 낸다. 뛰거나 싸우면 좀비가 몰려온다<br>• <b style="color:#c9a6ff">비명꾼</b>을 먼저 잡아라 · 깜박이는 차는 경보가 울린다<br>• 밤이 되기 전 오피스텔 앞으로 돌아와 [뒤지기/E]로 들어간다<br>• 길: 강남역 지하(지하철 출구) → 북쪽 선로 → 한남대교 → 남산</div>
   ${sv?`<button class="btn pri" onclick="loadGame()">이어하기 · ${sv.G.day}일차 ${svTime(sv)}</button><button class="btn" onclick="if(confirm('저장된 기록이 지워집니다. 새로 시작할까요?')){clearSave();newGame()}">새로 시작</button>`:`<button class="btn pri" onclick="newGame()">시작하기</button>`}</div>`);
 }
 function svTime(d){const m=360+d.G.t/DAY*1080;return `${String(m/60|0).padStart(2,'0')}:${String(m%60|0).padStart(2,'0')}${d.area?' · 건물 안':d.base?' · 거점':''}`}
 function gameOver(k){
   G.state='over';clearSave();$('#modal').classList.remove('on');
   showScreen(`<div class="win big"><h1>${k==='inf'?'감염':'쓰러졌다'}</h1><p>${k==='inf'?'열이 오르고 시야가 흐려졌다. 더는 사람이 아니다.':'아스팔트 위에 쓰러졌다. 멀리서 발소리가 다가온다.'}</p><p>${G.day}일차 · 처치 ${G.kills}</p><button class="btn pri" onclick="newGame()">다시 시작</button><button class="btn" onclick="titleScreen()">처음 화면으로</button></div>`);
-}
-function win(){
-  G.state='over';clearSave();$('#modal').classList.remove('on');
-  showScreen(`<div class="win big"><h1>8일째 아침</h1><p>무전기에서 잡음 섞인 목소리가 들렸다.<br>“…남산 송신소… 살아 있는 사람… 응답하라…”</p><p style="color:var(--accent)">7일 생존 달성 · 처치 ${G.kills}</p><p>다음 이야기: 한강을 건너 남산으로 (개발 예정)</p><button class="btn pri" onclick="newGame()">처음부터 다시</button></div>`);
 }
 
 /* ───────── 토스트·HUD ───────── */
@@ -1115,6 +1305,7 @@ function hud(){
   if(G.state==='field'){
     if(P.search)p=`뒤지는 중… 움직이면 멈춘다`;
     else if(!G.area&&nearHome())p=`[E/✋] 청운 오피스텔 거점으로 들어가기`;
+    else if(nearLink()){const l=nearLink();p=`[E/✋] ${l.label}`}
     else if(!G.area&&doorBuilding()){const b=doorBuilding();p=`[E/✋] ${b.name} 들어가기 · ${b.floors}층 건물`}
     else if(nearNpc()){const n=nearNpc();p=`[E/✋] ${SURV[n.id].n}에게 말 걸기`}
     else if(inTile()){const t=inTile();p=t===10?'[E/✋] 거리로 나가기':t===8?`[E/✋] ${G.area.f+1}층으로 올라가기`:`[E/✋] ${G.area.f-1}층으로 내려가기`}
@@ -1148,9 +1339,10 @@ function render(){
   for(const d of decals){if(d.x<vx0||d.x>vx1||d.y<vy0||d.y>vy1)continue;ctx.fillStyle='rgba(70,12,10,.5)';ctx.beginPath();ctx.ellipse(d.x,d.y,d.r,d.r*.6,d.a,0,7);ctx.fill()}
   // 거점 표시
   const hx=(HOME_TILE.x+.5)*T,hy=(HOME_TILE.y+.5)*T,pulse=.5+.5*Math.sin(performance.now()/400);
-  if(!G.area){ctx.strokeStyle=`rgba(230,185,76,${.35+.35*pulse})`;ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(hx,hy,30,18,0,0,7);ctx.stroke()}
+  if(!G.area&&G.zone==='gangnam'){ctx.strokeStyle=`rgba(230,185,76,${.35+.35*pulse})`;ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(hx,hy,30,18,0,0,7);ctx.stroke()}
   // 소리 원
   for(const n of noises){const k=n.t/.8;ctx.strokeStyle=`rgba(${n.col},${.45*(1-k)})`;ctx.lineWidth=2/zoom+1;ctx.beginPath();ctx.ellipse(n.x,n.y,n.r*Math.min(1,k*1.6),n.r*Math.min(1,k*1.6)*.7,0,0,7);ctx.stroke()}
+  drawFinal();
   // 뒤질 것
   for(const c of conts){if(c.car||c.x<vx0||c.x>vx1||c.y<vy0||c.y>vy1)continue;drawCont(c)}
   // 깊이 정렬
@@ -1175,7 +1367,7 @@ function render(){
   if(P.search){const k=P.search.t/searchTime();ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillRect(P.x-20,P.y-46,40,6);ctx.fillStyle='#e6b94c';ctx.fillRect(P.x-20,P.y-46,40*k,6)}
   // 밤
   ctx.setTransform(DPR,0,0,DPR,0,0);
-  const nk=Math.max(clamp((G.t-NIGHT+25)/30,0,1),G.area?.62:0),dusk=G.area?0:1*clamp((G.t-NIGHT+50)/30,0,1)*(1-nk);
+  const nk=Math.max(clamp((G.t-NIGHT+25)/30,0,1),(G.area||ZONES[G.zone].dark)?.62:0),dusk=(G.area||ZONES[G.zone].dark)?0:1*clamp((G.t-NIGHT+50)/30,0,1)*(1-nk);
   if(dusk>0){ctx.fillStyle=`rgba(190,90,40,${.18*dusk})`;ctx.fillRect(0,0,W,H)}
   if(nk>0){
     dctx.setTransform(DPR,0,0,DPR,0,0);dctx.globalCompositeOperation='source-over';dctx.clearRect(0,0,W,H);
@@ -1187,19 +1379,22 @@ function render(){
     g=dctx.createRadialGradient(p.x,p.y,20,p.x,p.y,L);g.addColorStop(0,'rgba(0,0,0,.95)');g.addColorStop(1,'rgba(0,0,0,0)');dctx.fillStyle=g;
     dctx.beginPath();dctx.moveTo(p.x,p.y);dctx.arc(p.x,p.y,L,fa-.45,fa+.45);dctx.closePath();dctx.fill();
     for(const f of thrown)if(f.st==='burn'){const q=toScreen(f.x,f.y);g=dctx.createRadialGradient(q.x,q.y,5,q.x,q.y,80*zoom);g.addColorStop(0,'rgba(0,0,0,.9)');g.addColorStop(1,'rgba(0,0,0,0)');dctx.fillStyle=g;dctx.beginPath();dctx.arc(q.x,q.y,80*zoom,0,7);dctx.fill()}
-    if(!G.area){const q=toScreen(hx,hy);g=dctx.createRadialGradient(q.x,q.y,5,q.x,q.y,70*zoom);g.addColorStop(0,'rgba(0,0,0,.8)');g.addColorStop(1,'rgba(0,0,0,0)');dctx.fillStyle=g;dctx.beginPath();dctx.arc(q.x,q.y,70*zoom,0,7);dctx.fill()}
+    if(!G.area&&G.zone==='gangnam'){const q=toScreen(hx,hy);g=dctx.createRadialGradient(q.x,q.y,5,q.x,q.y,70*zoom);g.addColorStop(0,'rgba(0,0,0,.8)');g.addColorStop(1,'rgba(0,0,0,0)');dctx.fillStyle=g;dctx.beginPath();dctx.arc(q.x,q.y,70*zoom,0,7);dctx.fill()}
     ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(dk,0,0);ctx.setTransform(DPR,0,0,DPR,0,0);
   }
   if(P.hurt>0||P.hp<30){const a=P.hurt>0?P.hurt*1.2:.15+.1*Math.sin(performance.now()/300);const g=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*.3,W/2,H/2,Math.max(W,H)*.7);g.addColorStop(0,'rgba(150,0,0,0)');g.addColorStop(1,`rgba(150,0,0,${a})`);ctx.fillStyle=g;ctx.fillRect(0,0,W,H)}
   // 거점 방향
-  const hs=toScreen(hx,hy);
+  let gx=hx,gy=hy,gl='거점';
+  if(G.zone!=='gangnam'){const bl=links.filter(l=>l.to===ZONES[G.zone].back).sort((a,b)=>hyp((a.x+.5)*T-P.x,(a.y+.5)*T-P.y)-hyp((b.x+.5)*T-P.x,(b.y+.5)*T-P.y))[0];if(bl){gx=(bl.x+.5)*T;gy=(bl.y+.5)*T;gl='돌아가는 길'}}
+  const hs=toScreen(gx,gy);
   if(!G.area&&(hs.x<10||hs.y<10||hs.x>W-10||hs.y>H-10)){
     const cx=W/2,cy=H/2,a=Math.atan2(hs.y-cy,hs.x-cx),m=40;
     const k=Math.min((W/2-m)/Math.abs(Math.cos(a)||1e-6),(H/2-m-60)/Math.abs(Math.sin(a)||1e-6));
     const ax=cx+Math.cos(a)*k,ay=cy+Math.sin(a)*k;
     ctx.save();ctx.translate(ax,ay);ctx.rotate(a);ctx.fillStyle='rgba(230,185,76,.9)';ctx.beginPath();ctx.moveTo(14,0);ctx.lineTo(-6,-8);ctx.lineTo(-6,8);ctx.closePath();ctx.fill();ctx.restore();
-    ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.fillStyle='#e6b94c';ctx.fillText(`거점 ${Math.round(hyp(P.x-hx,P.y-hy)/T)}m`,ax-Math.cos(a)*24,ay-Math.sin(a)*24+4);
+    ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.fillStyle='#e6b94c';ctx.fillText(`${gl} ${Math.round(hyp(P.x-gx,P.y-gy)/T)}m`,ax-Math.cos(a)*24,ay-Math.sin(a)*24+4);
   }
+  drawFinalBar();
 }
 function behind(x0,y0,x1,y1){return P.x>x0-8&&P.x<x1+8&&P.y>y0&&P.y<y1}
 function drawGround(tx0,ty0,tx1,ty1){
@@ -1220,6 +1415,8 @@ function drawGround(tx0,ty0,tx1,ty1){
     if(m&128&&x%2===0)ctx.fillRect(x*T+4,y*T+15,22,2);
   }
   if(G.area)return;
+  drawLinks();
+  if(G.zone!=='gangnam'){drawZLabels();return}
   // 길 이름·역 이름
   ctx.textAlign='center';
   for(const r of ROADS){if(!r.n)continue;
@@ -1293,26 +1490,35 @@ function openMap(){
   const PX=G.area?G.area.b.door.x+.5:P.x/T,PY=G.area?G.area.b.door.y+.5:P.y/T;
   const s=Math.max(2,Math.min((innerWidth-48)/MW,(innerHeight-120)/MH));
   const m=$('#modal');
-  m.innerHTML=`<div class="win" style="width:auto"><div class="whead"><div><h2>강남역 일대</h2><small>★ 거점 · ● 나 · ? 생존자 신호 · 상호는 패러디</small></div><button class="btn" style="flex:0 0 auto;padding:6px 12px" onclick="closeMap()">닫기</button></div><div style="padding:8px;display:flex;justify-content:center"><canvas id="mapc" width="${MW*s*DPR|0}" height="${MH*s*DPR|0}" style="width:${MW*s|0}px;height:${MH*s|0}px;position:static;display:block;border-radius:6px"></canvas></div></div>`;
+  m.innerHTML=`<div class="win" style="width:auto"><div class="whead"><div><h2>${ZONES[G.zone].n}</h2><small>${G.zone==='gangnam'?'★ 거점 · ● 나 · ? 생존자 신호 · ▼ 지하 입구':'● 나 · ▲▼ 다른 구역으로 · 📡 송신소'}</small></div><button class="btn" style="flex:0 0 auto;padding:6px 12px" onclick="closeMap()">닫기</button></div><div style="padding:8px;display:flex;justify-content:center"><canvas id="mapc" width="${MW*s*DPR|0}" height="${MH*s*DPR|0}" style="width:${MW*s|0}px;height:${MH*s|0}px;position:static;display:block;border-radius:6px"></canvas></div></div>`;
   m.classList.add('on');
   const c=$('#mapc').getContext('2d');c.scale(DPR*s,DPR*s);
-  const COL=['#3a3d42','#57544d','#3e4934','#4a4640','#6a3532'];
-  for(let y=0;y<MH;y++)for(let x=0;x<MW;x++){c.fillStyle=COL[tile[y*MW+x]];c.fillRect(x,y,1.05,1.05)}
-  for(const b of buildings){c.fillStyle=b.home?'#e6b94c':b.kind==='tower'?'#5d7f99':b.kind==='cinema'?b.col:'#8e8a80';c.fillRect(b.x+.1,b.y+.1,b.w-.2,b.h-.2);
+  const COL=['#3a3d42','#57544d','#3e4934','#4a4640','#6a3532','#5b5852','#24211e','#08080a','#5b5852','#5b5852','#5b5852','#1f3a4d','#3b3631','#6d6a64','#08080a','#8a8680','#7a6a4a'];
+  const TL=G.area?STREET.tile:tile,BL=G.area?STREET.buildings:buildings,LL=G.area?[]:links,TR=G.area?STREET.trees:trees;
+  for(let y=0;y<MH;y++)for(let x=0;x<MW;x++){c.fillStyle=COL[TL[y*MW+x]];c.fillRect(x,y,1.05,1.05)}
+  if(G.zone!=='gangnam'){c.fillStyle='#2c3a27';for(const t of TR)c.fillRect(t.x/T-.5,t.y/T-.5,1,1)}
+  for(const b of BL){c.fillStyle=b.home?'#e6b94c':b.kind==='tower'?'#5d7f99':b.kind==='cinema'?b.col:'#8e8a80';c.fillRect(b.x+.1,b.y+.1,b.w-.2,b.h-.2);
     if(!b.home&&b.kind!=='tower'&&b.kind!=='cinema'){c.fillStyle=b.col;c.fillRect(b.x+.1,b.y+b.h-.8,b.w-.2,.7)}}
   c.textAlign='center';c.font=`bold ${Math.max(2.6,11/s)}px sans-serif`;
-  for(const b of buildings)if(b.lm&&b.mapName!==''){c.fillStyle='#fff';c.fillText(b.mapName||b.name,b.x+b.w/2,b.y+b.h/2+1)}
+  if(G.zone!=='gangnam'){c.textAlign='center';c.font=`bold ${Math.max(2.6,11/s)}px sans-serif`;c.fillStyle='#fff';BL.forEach((b,i)=>c.fillText(b.name,b.x+b.w/2,i%2?b.y+b.h+3:b.y-0.5));c.fillStyle='rgba(255,255,255,.6)';for(const l of ZLABELS)if(l.s>=14)c.fillText(l.t,l.x,l.y+1)}
+  for(const l of LL){c.fillStyle=l.to==='final'?'#ff8a5a':'#ffd76a';c.beginPath();c.arc(l.x+.5,l.y+.5,1.3,0,7);c.fill()}
+  if(G.zone==='gangnam'){
+  for(const b of BL)if(b.lm&&b.mapName!==''){c.fillStyle='#fff';c.fillText(b.mapName||b.name,b.x+b.w/2,b.y+b.h/2+1)}
   c.fillStyle='rgba(255,255,255,.55)';
   for(const r of ROADS)if(r.n){if(r.d==='v'){c.save();c.translate(r.x+r.w/2,50);c.rotate(-Math.PI/2);c.fillText(r.n,0,1);c.restore()}else c.fillText(r.n,r.x+r.w-8,r.y+r.h/2+1)}
   for(const st of STATIONS){c.fillStyle=st.col;c.beginPath();c.arc(st.x,st.y,2.6,0,7);c.fill();c.fillStyle='#fff';c.fillText(st.n,st.x+12,st.y-3)}
   for(const id of SURV_ORDER){const sv=G.surv[id];if(sv.st!=='lost'||!hinted(id))continue;const b=survBuilding(sv);if(!b)continue;c.fillStyle='#ffd76a';c.beginPath();c.arc(b.x+b.w/2,b.y+b.h/2,2.4,0,7);c.fill();c.fillStyle='#2a1f10';c.font=`bold ${Math.max(3,12/s)}px sans-serif`;c.fillText('?',b.x+b.w/2,b.y+b.h/2+1.2)}
   c.fillStyle='#e6b94c';c.font=`bold ${Math.max(4,16/s)}px sans-serif`;c.fillText('★',HOME_TILE.x+.5,HOME_TILE.y+1.5);
+  }
   c.fillStyle='#ff5a4a';c.beginPath();c.arc(PX,PY,1.4,0,7);c.fill();
   c.strokeStyle='#ff5a4a';c.lineWidth=.6;c.beginPath();c.moveTo(PX,PY);c.lineTo(PX+P.fx*3,PY+P.fy*3);c.stroke();
 }
 function closeMap(){$('#modal').classList.remove('on');if(G&&G.state==='map'){G.state='field';last=performance.now()}}
 function drawCar(c){
   const x=c.x*T+3,y=c.y*T+3,w=c.w*T-6,h=c.h*T-6;
+  if(c.train){ctx.fillStyle='rgba(0,0,0,.35)';ctx.fillRect(x+4,y+6,w,h);ctx.fillStyle='#c9c9c4';ctx.fillRect(x,y-8,w,h+8);ctx.fillStyle=c.col;ctx.fillRect(x,y+h*.45,w,6);
+    ctx.fillStyle='#2a3036';for(let xx=x+10;xx<x+w-20;xx+=40)ctx.fillRect(xx,y-4,26,h*.35);ctx.fillStyle='#55595e';for(let xx=x+64;xx<x+w-10;xx+=64)ctx.fillRect(xx,y-8,2,h+8);
+    ctx.fillStyle='#333';ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.fillText(c.label||'',x+w/2,y+h-4);return}
   ctx.fillStyle='rgba(0,0,0,.3)';ctx.fillRect(x+3,y+5,w,h);
   ctx.fillStyle=c.col;ctx.fillRect(x,y-4,w,h+4);
   ctx.fillStyle='rgba(255,255,255,.12)';ctx.fillRect(x,y-4,w,3);
@@ -1336,6 +1542,7 @@ function drawCont(c){
   const x=c.x,y=c.y,dim=c.empty;ctx.globalAlpha=dim?.45:1;
   if(c.type==='bin'){ctx.fillStyle='#3f6b46';ctx.fillRect(x-7,y-14,14,16);ctx.fillStyle='#355a3b';ctx.fillRect(x-8,y-16,16,4)}
   else if(c.type==='parcel'){ctx.fillStyle='#a07a4a';ctx.fillRect(x-9,y-10,18,13);ctx.fillStyle='#c9a46a';ctx.fillRect(x-9,y-10,18,3);ctx.fillStyle='#e6dcc8';ctx.fillRect(x-3,y-6,7,4)}
+  else if(c.type==='mil'){ctx.fillStyle='#4d5a32';ctx.fillRect(x-11,y-14,22,15);ctx.fillStyle='#3a4426';ctx.fillRect(x-11,y-14,22,4);ctx.fillStyle='#d8d0a0';ctx.font='bold 7px sans-serif';ctx.textAlign='center';ctx.fillText('군',x,y-3)}
   else if(c.look==='fridge'){ctx.fillStyle='#c9ced2';ctx.fillRect(x-9,y-26,18,28);ctx.fillStyle='#9aa3a8';ctx.fillRect(x-9,y-14,18,2);ctx.fillRect(x+5,y-22,2,6)}
   else if(c.look==='desk'){ctx.fillStyle='#6b5640';ctx.fillRect(x-13,y-12,26,12);ctx.fillStyle='#2a2f35';ctx.fillRect(x-6,y-22,12,9);ctx.fillStyle='#4f6f8f';ctx.fillRect(x-5,y-21,10,7)}
   else if(c.look==='cabinet'){ctx.fillStyle='#7a6046';ctx.fillRect(x-10,y-24,20,26);ctx.fillStyle='#5a4532';ctx.fillRect(x-1,y-22,2,22)}

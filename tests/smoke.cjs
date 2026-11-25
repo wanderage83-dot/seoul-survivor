@@ -75,7 +75,7 @@ const url=process.argv[2]||'http://127.0.0.1:8795',out=process.argv[3];
       for(let i=0;i<300&&Z.includes(z0);i++){P.hp=100;update(1/60)}
       r.fight=!Z.includes(z0);
       G.surv.doyun.st='base';G.stash={can:5,water:5};const m0=['scrap','cloth','wood','tape','parts'].reduce((a,k)=>a+(G.stash[k]||0),0);
-      interact();sleep();const m1=['scrap','cloth','wood','tape','parts'].reduce((a,k)=>a+(G.stash[k]||0),0);
+      P.bag={};interact();sleep();const m1=['scrap','cloth','wood','tape','parts'].reduce((a,k)=>a+(G.stash[k]||0),0);
       r.morning=m1===m0+2&&G.stash.can===3&&G.stash.water===3;
       saveGame();r.saved=readSave().G.surv.gangseok.st==='base';
       return r});
@@ -94,9 +94,25 @@ const url=process.argv[2]||'http://127.0.0.1:8795',out=process.argv[3];
       if(out&&t==='fac')await p.screenshot({path:`${out}/base-${vp.w}.png`});
     }
     ok(await p.evaluate(()=>{build('barr');build('rain');craft(0);return G.fac.barr===1&&G.fac.rain===1&&G.stash.bandage>=1}),`${vp.w}: 시설·제작`);
-    // 7일 버티기
-    const end=await p.evaluate(()=>{for(let i=0;i<7;i++){if(G.state==='over')break;P.food=P.water=100;P.hp=100;G.fac.barr=3;sleep()}return {st:G.state,day:G.day,win:$('#screen').textContent.includes('8일째')}});
-    ok(end.win,`${vp.w}: 7일 생존 승리 (${end.day}일)`);
+    // 며칠 지나도 끝나지 않는다(승리는 남산 송신)
+    ok(await p.evaluate(()=>{const d0=G.day;for(let i=0;i<7;i++){P.food=P.water=100;P.hp=100;P.inf=0;G.fac.barr=3;sleep()}return G.state!=='over'&&G.day===d0+7}),`${vp.w}: 7일이 지나도 계속된다`);
+    // 구역: 강남 → 지하 → 한남대교 → 남산 → 송신 → 구조
+    const zone=await p.evaluate(async()=>{
+      const r={};$('#modal').classList.remove('on');G.state='field';Z=[];
+      const reach=()=>{const a=links[0];const D=bfs((a.x+.5)*T,(a.y+.5)*T);return links.every(l=>D[l.y*MW+l.x]>=0)&&conts.every(c=>{if(c.car){const k=c.car;for(let j=k.y-1;j<=k.y+k.h;j++)for(let i=k.x-1;i<=k.x+k.w;i++)if(D[j*MW+i]>=0)return true;return false}return D[(c.y/T|0)*MW+(c.x/T|0)]>=0})};
+      const go=(id)=>{const l=links.find(l=>l.to===id);P.x=(l.x+.5)*T;P.y=(l.y+.5)*T;interact();Z=[]};
+      r.gReach=reach();
+      go('subway');r.sub=G.zone==='subway'&&links.length===9;r.sReach=reach();
+      const back=links.find(l=>l.id==='s11');P.x=(back.x+.5)*T;P.y=(back.y+.5)*T;interact();const g11=links.find(l=>l.id==='g11');r.back=G.zone==='gangnam'&&hyp(P.x-(g11.x+.5)*T,P.y-(g11.y+.5)*T)<2;
+      go('subway');Z=[];go('bridge');r.bridge=G.zone==='bridge';r.bReach=reach();
+      go('namsan');r.nam=G.zone==='namsan';r.nReach=reach();
+      saveGame();r.savedZone=readSave().G.zone==='namsan';
+      const tx=links.find(l=>l.to==='final');P.x=(tx.x+.5)*T;P.y=(tx.y+.5)*T;P.bag={};interact();r.need=G.state==='talk'&&$('#modal .pri').disabled;talkEnd();
+      P.bag={parts:5,tape:2};interact();$('#modal .pri').click();r.start=!!G.final&&!P.bag.parts;
+      G.final.p=.995;for(let i=0;i<90&&G.state!=='over';i++){P.hp=100;update(1/30)}
+      r.win=G.state==='over'&&$('#screen').textContent.includes('구조 신호')&&!readSave();
+      return r});
+    ok(Object.values(zone).every(Boolean),`${vp.w}: 구역 이동·연결·송신 승리 ${JSON.stringify(zone)}`);
     // 사망
     await p.evaluate(()=>{newGame();P.hp=0});await p.waitForTimeout(200);
     ok(await p.evaluate(()=>G.state==='over'),`${vp.w}: 체력 0이면 끝`);
