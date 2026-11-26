@@ -6,22 +6,40 @@
 # 배경: 원본 네 귀퉁이 색(마젠타·흰색 권장)과 비슷한 픽셀을 투명으로. 출력은 1배 크기 PNG(게임이 각지게 키운다).
 import sys
 from PIL import Image,ImageFilter
-PAL=['#0b0a12','#15141f','#1f1d2b','#2a2838','#373447','#46425a','#58536e','#6d6886','#88839f','#aaa6bd','#d2cfdd','#f0eef5','#1c2c42','#2c4766','#466e93','#74a0c6','#3a3020','#5c4a2e','#8a6e44','#b89a68','#1f3a2c','#33603f','#5a9a5c','#5a1418','#9a2224','#d0453a','#e45c86','#f09a3a','#f2d45c','#40c8c0','#8a5cc8','#ffffff']
+PAL=['#0b0a12','#15141f','#1f1d2b','#2a2838','#373447','#46425a','#58536e','#6d6886','#88839f','#aaa6bd','#d2cfdd','#f0eef5','#1c2c42','#2c4766','#466e93','#74a0c6','#3a3020','#5c4a2e','#8a6e44','#b89a68','#1f3a2c','#33603f','#5a9a5c','#5a1418','#9a2224','#d0453a','#e45c86','#f09a3a','#f2d45c','#40c8c0','#8a5cc8','#ffffff','#3e4226','#5e6334','#7e8446','#8a5a40','#c08a68','#e2b896','#2e2240','#4e3a6a','#506070','#7d8a98','#a03a64','#5e7a3a','#c8c8b0','#8c8c74','#2a4a4a','#3d6e6a']
 def palimg():
     p=Image.new('P',(1,1));flat=[]
     for h in PAL:flat+=[int(h[1:3],16),int(h[3:5],16),int(h[5:7],16)]
     p.putpalette(flat+[0]*(768-len(flat)));return p
 def unbg(im,tol=60):
+    # 마젠타 배경이면 「마젠타스러운」 픽셀(경계 번짐 포함)을 모두 지우고, 아니면 귀퉁이 색과 비슷한 픽셀을 지운다
     im=im.convert('RGBA');px=im.load();w,h=im.size
     corners=[px[0,0],px[w-1,0],px[0,h-1],px[w-1,h-1]];bg=max(set(corners),key=corners.count)
+    mag=bg[0]>170 and bg[2]>170 and bg[1]<110
     for y in range(h):
         for x in range(w):
             r,g,b,a=px[x,y]
-            if abs(r-bg[0])+abs(g-bg[1])+abs(b-bg[2])<tol:px[x,y]=(0,0,0,0)
+            if mag:
+                if r-g>90 and b-g>90 and abs(r-b)<90:px[x,y]=(0,0,0,0)
+            elif abs(r-bg[0])+abs(g-bg[1])+abs(b-bg[2])<tol:px[x,y]=(0,0,0,0)
     return im
-def topal(im):
+def topal(im,colors=24):
     a=im.getchannel('A').point(lambda v:255 if v>110 else 0)
-    q=im.convert('RGB').quantize(palette=palimg(),dither=Image.Dither.NONE).convert('RGBA');q.putalpha(a);return q
+    q=im.convert('RGB').quantize(colors=colors,method=Image.Quantize.MEDIANCUT,dither=Image.Dither.NONE).convert('RGBA');q.putalpha(a);return q
+def biggest(im):
+    # 가장 큰 덩어리만 남긴다(옆 칸에서 넘어온 조각 지우기)
+    sm=im.getchannel('A').resize((max(1,im.width//4),max(1,im.height//4)),Image.NEAREST);w,h=sm.size;A=sm.load();seen=[[0]*w for _ in range(h)];best=None
+    for y in range(h):
+        for x in range(w):
+            if A[x,y]>0 and not seen[y][x]:
+                st=[(x,y)];seen[y][x]=1;cells=[]
+                while st:
+                    cx,cy=st.pop();cells.append((cx,cy))
+                    for nx,ny in ((cx+1,cy),(cx-1,cy),(cx,cy+1),(cx,cy-1),(cx+1,cy+1),(cx-1,cy-1),(cx+1,cy-1),(cx-1,cy+1)):
+                        if 0<=nx<w and 0<=ny<h and A[nx,ny]>0 and not seen[ny][nx]:seen[ny][nx]=1;st.append((nx,ny))
+                if not best or len(cells)>len(best):best=cells
+    if not best:return im
+    xs=[c[0] for c in best];ys=[c[1] for c in best];return im.crop((min(xs)*4,min(ys)*4,min(im.width,(max(xs)+1)*4),min(im.height,(max(ys)+1)*4)))
 def outline(im):
     out=Image.new('RGBA',(im.width+2,im.height+2),(0,0,0,0));out.alpha_composite(im,(1,1))
     A=out.getchannel('A');D=A.filter(ImageFilter.MaxFilter(3));px=out.load();Ap=A.load();Dp=D.load()
@@ -30,7 +48,7 @@ def outline(im):
             if Ap[x,y]==0 and Dp[x,y]>0:px[x,y]=(11,10,18,255)
     return out
 def sprite(src,H=32):
-    im=unbg(Image.open(src));bb=im.getchannel('A').getbbox();im=im.crop(bb)
+    im=biggest(unbg(Image.open(src)));bb=im.getchannel('A').getbbox();im=im.crop(bb)
     w=max(1,round(im.width*H/im.height));return outline(topal(im.resize((w,H),Image.BOX)))
 def sheet(src,cols,rows,H=32):
     im=unbg(Image.open(src));cw,ch=im.width//cols,im.height//rows;cells=[]
@@ -46,7 +64,7 @@ def sheet(src,cols,rows,H=32):
     return out
 def tile(src,N=16):
     im=Image.open(src).convert('RGBA');m=min(im.size);im=im.crop(((im.width-m)//2,(im.height-m)//2,(im.width+m)//2,(im.height+m)//2))
-    return topal(im.resize((N,N),Image.BOX))
+    return topal(im.resize((N,N),Image.BOX),16)
 if __name__=='__main__':
     mode,out,src=sys.argv[1],sys.argv[2],sys.argv[3];a=[int(v) for v in sys.argv[4:]]
     im=sprite(src,*a) if mode=='sprite' else sheet(src,*a) if mode=='sheet' else tile(src,*a)
