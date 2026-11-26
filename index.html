@@ -20,7 +20,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 #info{text-align:right;font-size:12px;background:rgba(0,0,0,.5);padding:5px 9px;border-radius:9px;line-height:1.5;pointer-events:auto}
 #clock{font-size:15px;font-weight:700;color:var(--accent)}
 #clock.night{color:#8fa8ff}
-#pausebtn,#mapbtn{border:1px solid var(--line);background:rgba(255,255,255,.06);border-radius:6px;padding:1px 7px;font-size:11px;margin-top:2px}
+#pausebtn,#mapbtn,#invbtn,#lightbtn{border:1px solid var(--line);background:rgba(255,255,255,.06);border-radius:6px;padding:1px 7px;font-size:11px;margin-top:2px}
 #quick{display:flex;gap:5px;pointer-events:auto;flex-wrap:wrap}
 #quick button{border:1px solid var(--line);background:rgba(0,0,0,.55);border-radius:9px;padding:4px 8px;font-size:12px;display:flex;align-items:center;gap:3px;min-height:30px}
 #quick button:disabled{opacity:.35}
@@ -74,6 +74,16 @@ body.touch #btns{display:grid;position:fixed;right:14px;bottom:calc(18px + env(s
 .stat{display:grid;grid-template-columns:52px 1fr 34px;gap:6px;align-items:center;margin:4px 0}
 .stat .bar{height:9px}
 .no{color:var(--red)}
+.win.inv .wbody{display:flex;flex-direction:column;gap:8px}
+.slots,.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:5px}
+.ic{position:relative;border:1px solid var(--line);background:rgba(255,255,255,.05);border-radius:7px;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2px;min-height:52px}
+.ic span{font-size:20px;line-height:1}.ic small{font-size:9px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.ic em{position:absolute;right:4px;top:2px;font-style:normal;font-size:11px;font-weight:700;color:var(--accent)}
+.ic.sel{border-color:var(--accent);background:rgba(230,185,76,.15)}.ic.slot{background:rgba(90,120,160,.12)}
+.ic .dur{position:absolute;left:4px;bottom:3px;height:2px;background:#7fbf6a;max-width:calc(100% - 8px)}
+.wrow{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;font-size:12px;color:var(--dim)}.wrow b{color:var(--ink)}
+.desc{font-size:12px;line-height:1.5;color:#cfcac0;margin:0}.acts{display:flex;gap:6px;flex-wrap:wrap}.acts button{border:1px solid var(--line);background:rgba(255,255,255,.08);border-radius:8px;padding:6px 10px;font-size:12px}
+.btn.x{flex:0 0 auto;padding:4px 10px}
 .ln{display:flex;justify-content:space-between;position:relative;padding:10px 14px 2px}
 .ln:before{content:'';position:absolute;left:44px;right:44px;top:17px;height:4px;background:#d8691c;border-radius:2px}
 .ln .st{position:relative;text-align:center;font-size:11px;width:68px;color:#888}
@@ -99,7 +109,7 @@ body:not(.ingame) #hud,body:not(.ingame) #btns,body:not(.ingame) #joyzone,body:n
       <span>💧 갈증</span><div class="bar"><i id="bWater" style="background:#5aa7e0"></i></div><b id="nWater"></b>
       <span>☣ 감염</span><div class="bar"><i id="bInf" style="background:#9be05a"></i></div><b id="nInf"></b>
     </div>
-    <div id="info"><div id="clock"></div><div id="wpn"></div><div id="bagn"></div><button id="mapbtn">🗺 지도</button> <button id="pausebtn">Ⅱ 일시정지</button></div>
+    <div id="info"><div id="clock"></div><div id="wpn"></div><div id="bagn"></div><button id="invbtn">🎒 가방</button> <button id="lightbtn">🔦</button><br><button id="mapbtn">🗺 지도</button> <button id="pausebtn">Ⅱ 일시정지</button></div>
   </div>
   <div id="quick"></div>
 </div>
@@ -822,13 +832,117 @@ function drawSheet(n,o,moving,alpha){
 }
 function drawProp(n,x,y,S){const im=ART[n];if(!im)return false;S=S||2;ctx.drawImage(im,Math.round(x-im.width*S/2),Math.round(y-im.height*S),im.width*S,im.height*S);return true}
 
+/* ───────── 가방·장비 ─────────
+   가방은 무게(kg)로 찬다. 장비 칸: 무기(P.weapon)·머리·몸·가방·손전등(P.eq). 손전등은 건전지(P.bat 0~100)를 쓴다.
+   뒤지기가 끝나면 전리품 창(openLoot)이 열려 골라 줍거나 「전부 줍기」. 가방 창(openInv)에서 사용·장착·버리기. */
+Object.assign(ITEMS,{
+  helmet:{n:'오토바이 헬멧',ic:'⛑'}, padding:{n:'두꺼운 패딩',ic:'🧥'}, vest:{n:'방검 조끼',ic:'🦺'},
+  backpack:{n:'등산 배낭',ic:'🎒'}, light:{n:'손전등',ic:'🔦'}, battery:{n:'건전지',ic:'🔋'}
+});
+const WT={can:.4,ramen:.2,veg:.3,water:.5,bandage:.05,anti:.05,fire:.2,scrap:1,cloth:.2,wood:.8,tape:.1,parts:.3,pipe:1.5,bat:1,nailbat:1.3,shovel:2,axe:2.5,helmet:1.2,padding:.9,vest:3,backpack:.8,light:.3,battery:.1};
+const GEAR={helmet:{slot:'head',def:.12,bite:0},padding:{slot:'body',def:.08,bite:.3},vest:{slot:'body',def:.25,bite:.15},backpack:{slot:'pack',cap:10},light:{slot:'light'}};
+const SLOTS=[['weapon','무기'],['head','머리'],['body','몸'],['pack','가방'],['light','손전등']];
+LOOT.trunk.t.push(['helmet',.06],['light',.08],['battery',.15]);
+LOOT.mil.t.push(['vest',.12],['helmet',.1],['backpack',.06],['light',.15],['battery',.25]);
+LOOT.apparel.t.push(['padding',.18],['backpack',.1]);
+LOOT.villa.t.push(['padding',.05],['backpack',.04],['battery',.1]);
+LOOT.hard.t.push(['light',.18],['battery',.3]);LOOT.mart.t.push(['battery',.25]);LOOT.elec.t.push(['battery',.35],['light',.1]);
+LOOT.bus.t.push(['backpack',.06]);LOOT.office.t.push(['battery',.15]);LOOT.parcel.t.push(['battery',.1]);
+const bagWeight=()=>Object.entries(P.bag).reduce((a,[k,n])=>a+(WT[k]||.5)*n,0);
+const capKg=()=>15+(P.eq&&P.eq.pack?GEAR.backpack.cap:0)+((ALLY&&ALLY.id==='doyun')||(G.state==='base'&&G.follow==='doyun')?6:0);
+const canCarry=(id,n=1)=>bagWeight()+(WT[id]||.5)*n<=capKg()+1e-6;
+const kg=v=>(Math.round(v*10)/10).toFixed(1);
+const gearDef=()=>['head','body'].reduce((a,s)=>a+(P.eq[s]?GEAR[P.eq[s]].def:0),0);
+const gearBite=()=>P.eq.body?GEAR[P.eq.body].bite:0;
+const lightActive=()=>!!(P.eq&&P.eq.light&&P.lightOn&&P.bat>0);
+function itemDesc(id){
+  const it=ITEMS[id],w=WEAP[id],g=GEAR[id],o=[];
+  if(it.food)o.push(`배고픔 ${it.food>0?'+':''}${it.food}`);if(it.water)o.push(`갈증 ${it.water>0?'+':''}${it.water}`);
+  if(it.hp)o.push(`체력 +${it.hp}`);if(it.inf)o.push(`감염 ${it.inf}`);
+  if(w)o.push(`공격 ${w.dmg} · 내구 ${w.dur} · 속도 ${(1/w.cd).toFixed(1)}/초`);
+  if(g&&g.def!==undefined)o.push(`받는 피해 −${Math.round(g.def*100)}%`);if(g&&g.bite)o.push(`물릴 확률 −${Math.round(g.bite*100)}%`);
+  if(g&&g.cap)o.push(`들 수 있는 무게 +${g.cap}kg`);
+  if(id==='light')o.push('밤·실내에서 앞을 비춘다 (건전지 사용)');if(id==='battery')o.push('손전등 건전지 100%로 교체');
+  if(id==='fire')o.push('던지면 5초 동안 소리로 좀비를 끈다');if(it.mat)o.push('제작 재료');
+  return o.join(' · ');
+}
+/* 전리품 창 */
+let LOOTC=null,INVSEL=null,INVBACK=null;
+function openLoot(c){LOOTC=c;G.state='loot';renderLoot()}
+function groupList(arr){const m={};for(const id of arr)m[id]=(m[id]||0)+1;return Object.entries(m)}
+function wbar(){const w=bagWeight(),c=capKg();return `<div class="wrow"><span>무게</span><div class="bar"><i style="width:${Math.min(100,w/c*100)}%;background:${w/c>.85?'#e0574d':'#7fbf6a'}"></i></div><b>${kg(w)} / ${c} kg</b></div>`}
+function cell(id,n,act,sel){return `<button class="ic${sel?' sel':''}" onclick="${act}" title="${ITEMS[id].n}"><span>${ITEMS[id].ic}</span>${n>1?`<em>${n}</em>`:''}<small>${ITEMS[id].n}</small></button>`}
+function renderLoot(){
+  const c=LOOTC,m=$('#modal'),L=groupList(c.loot);
+  m.innerHTML=`<div class="win inv"><div class="whead"><div><h2>${c.label||LOOT[c.type].n}</h2><small>${LOOT[c.type].n} · ${L.length?'눌러서 줍기':'비었다'}</small></div><button class="btn x" onclick="closeLoot()">✕</button></div>
+  <div class="wbody">${wbar()}<div class="grid">${L.map(([id,n])=>cell(id,n,`lootTake('${id}')`)).join('')||'<p style="color:var(--dim)">남은 것이 없다</p>'}</div>
+  ${L.length?`<p class="desc">${L.map(([id])=>`<b>${ITEMS[id].ic}${ITEMS[id].n}</b> ${kg(WT[id]||.5)}kg ${itemDesc(id)}`).slice(0,3).join('<br>')}</p>`:''}</div>
+  <div class="wfoot"><button onclick="closeLoot()">닫기</button><button class="pri" ${L.length?'':'disabled'} onclick="lootAll()">전부 줍기</button></div></div>`;
+  m.classList.add('on');
+}
+function lootTake(id){
+  const c=LOOTC;let n=0;
+  while(c.loot.includes(id)&&canCarry(id)){c.loot.splice(c.loot.indexOf(id),1);addTo(P.bag,id);n++}
+  if(c.loot.includes(id))toast('가방이 무겁다. 더는 못 든다','red','heavy');
+  if(n)toast(`${ITEMS[id].n} ${n}개 획득`,'green');renderLoot();
+}
+function lootAll(){for(const [id] of groupList(LOOTC.loot))lootTake(id);if(!LOOTC.loot.length)closeLoot()}
+function closeLoot(){if(LOOTC&&!LOOTC.loot.length)LOOTC.empty=true;LOOTC=null;$('#modal').classList.remove('on');if(G.state==='loot'){G.state='field';last=performance.now()}}
+/* 가방 창 */
+function openInv(fromBase){if(!G||(G.state!=='field'&&G.state!=='base'))return;INVBACK=fromBase||G.state==='base'?'base':'field';G.state='inv';INVSEL=null;renderInv()}
+function closeInv(){$('#modal').classList.remove('on');if(INVBACK==='base'){G.state='base';renderBase()}else{G.state='field';last=performance.now()}}
+function slotItem(s){return s==='weapon'?(P.weapon.id==='fist'?null:P.weapon.id):P.eq[s]}
+function renderInv(){
+  const m=$('#modal'),sel=INVSEL;
+  const slots=SLOTS.map(([s,n])=>{const id=slotItem(s);return `<button class="ic slot${sel&&sel.slot===s?' sel':''}" onclick="INVSEL={slot:'${s}'};renderInv()"><span>${id?ITEMS[id].ic:'·'}</span><small>${id?ITEMS[id].n:n}</small>${s==='weapon'&&id?`<i class="dur" style="width:${P.weapon.dur/WEAP[id].dur*100}%"></i>`:''}${s==='light'&&id?`<em>${Math.round(P.bat)}%</em>`:''}</button>`}).join('');
+  const items=Object.entries(P.bag).sort((a,b)=>Object.keys(ITEMS).indexOf(a[0])-Object.keys(ITEMS).indexOf(b[0]));
+  let det='<p class="desc">아이템이나 장비 칸을 누르면 자세히 보인다.</p>';
+  if(sel&&sel.id&&P.bag[sel.id]){
+    const id=sel.id,it=ITEMS[id],n=P.bag[id],usable=it.food||it.water||it.hp||it.inf||id==='battery'||id==='fire',eq=WEAP[id]||GEAR[id];
+    det=`<div class="desc"><b>${it.ic} ${it.n}</b> ×${n} · ${kg(WT[id]||.5)}kg (모두 ${kg((WT[id]||.5)*n)}kg)<br>${itemDesc(id)}</div><div class="acts">${usable?`<button onclick="invUse('${id}')">${id==='fire'?'던지기':id==='battery'?'손전등에 넣기':'사용'}</button>`:''}${eq?`<button onclick="invEquip('${id}')">장착</button>`:''}<button onclick="invDrop('${id}',1)">1개 버리기</button>${n>1?`<button onclick="invDrop('${id}',${n})">모두 버리기</button>`:''}</div>`;
+  }else if(sel&&sel.slot){
+    const id=slotItem(sel.slot);
+    det=id?`<div class="desc"><b>${ITEMS[id].ic} ${ITEMS[id].n}</b> (장착 중)${sel.slot==='weapon'?` · 내구 ${P.weapon.dur}/${WEAP[id].dur}`:''}${sel.slot==='light'?` · 건전지 ${Math.round(P.bat)}% · ${P.lightOn?'켜짐':'꺼짐'}`:''}<br>${itemDesc(id)}</div><div class="acts">${sel.slot==='light'?`<button onclick="toggleLight();renderInv()">${P.lightOn?'끄기':'켜기'}</button>`:''}<button onclick="invUnequip('${sel.slot}')">해제</button></div>`
+      :`<p class="desc">${SLOTS.find(s=>s[0]===sel.slot)[1]} 칸이 비었다. 가방의 장비를 눌러 「장착」.</p>`;
+  }
+  m.innerHTML=`<div class="win inv"><div class="whead"><div><h2>가방</h2><small>받는 피해 −${Math.round(gearDef()*100)}% · 물릴 확률 −${Math.round(gearBite()*100)}%</small></div><button class="btn x" onclick="closeInv()">✕</button></div>
+  <div class="wbody"><div class="slots">${slots}</div>${wbar()}<div class="grid">${items.map(([id,n])=>cell(id,n,`INVSEL={id:'${id}'};renderInv()`,sel&&sel.id===id)).join('')||'<p style="color:var(--dim)">가방이 비었다</p>'}</div>${det}</div>
+  <div class="wfoot"><button onclick="closeInv()">닫기</button></div></div>`;
+  m.classList.add('on');
+}
+function invUse(id){
+  if(id==='fire'){closeInv();throwFire();return}
+  if(id==='battery'){if(!P.eq.light){toast('손전등이 없다','red');return}take(P.bag,'battery');P.bat=100;toast('건전지 교체 · 100%','green')}
+  else useItem(id,P.bag);
+  if(!P.bag[id])INVSEL=null;renderInv();
+}
+function invEquip(id){
+  if(!P.bag[id])return;take(P.bag,id);
+  if(WEAP[id]){const old=P.weapon.id;if(old!=='fist'&&P.weapon.dur>WEAP[old].dur/2)addTo(P.bag,old);P.weapon={id,dur:WEAP[id].dur}}
+  else{const s=GEAR[id].slot,old=P.eq[s];if(old)addTo(P.bag,old);P.eq[s]=id}
+  toast(`${ITEMS[id].n} 장착`,'green');INVSEL={slot:WEAP[id]?'weapon':GEAR[id].slot};renderInv();
+}
+function invUnequip(s){
+  const id=slotItem(s);if(!id)return;
+  if(!canCarry(id)){toast('가방이 무거워 넣을 수 없다','red');return}
+  addTo(P.bag,id);if(s==='weapon')P.weapon={id:'fist',dur:Infinity};else{P.eq[s]=null;if(s==='light')P.lightOn=false}
+  INVSEL={id};renderInv();
+}
+function invDrop(id,n){take(P.bag,id,Math.min(n,P.bag[id]||0));if(!P.bag[id])INVSEL=null;toast(`${ITEMS[id].n} 버림`);renderInv()}
+function toggleLight(){if(!P.eq.light){toast('손전등이 없다','red','nolight');return}if(P.bat<=0){toast('건전지가 다 됐다','red','nolight');return}P.lightOn=!P.lightOn;P.lightManual=true}
+function lightTick(dt,dark){
+  if(!P.eq.light)return;
+  if(!P.lightManual)P.lightOn=dark&&P.bat>0;
+  if(lightActive()){P.bat=Math.max(0,P.bat-dt*.45);if(P.bat<=0){P.lightOn=false;toast('손전등 건전지가 다 됐다! 건전지가 필요하다','red')}}
+}
+
 /* ───────── 상태 ───────── */
 let G=null,P=null,Z=[],noises=[],fx=[],thrown=[],alarms=[];
 let flowD=null,flowT=0,shake=0,toastCD={};
 function newGame(){
-  G={day:1,t:0,state:'field',seed:(Math.random()*1e9)|0,stash:{water:2,can:2,cloth:1},fac:{rain:0,garden:0,barr:0},kills:0,spT:0,tab:'stat',floors:{},area:null,zone:'gangnam',final:null};STREET=null;ZC={};
+  G={day:1,t:0,state:'field',seed:(Math.random()*1e9)|0,stash:{water:2,can:2,cloth:1,battery:1},fac:{rain:0,garden:0,barr:0},kills:0,spT:0,tab:'stat',floors:{},area:null,zone:'gangnam',final:null};STREET=null;ZC={};
   gen(G.seed);placeSurvivors();ALLY=null;NPCS=[];
-  P={x:(HOME_TILE.x+.5)*T,y:(HOME_TILE.y+.8)*T,r:10,fx:0,fy:1,hp:100,food:80,water:80,inf:0,weapon:{id:'pipe',dur:22},bag:{water:1,can:1},atkCd:0,hurt:0,run:false,search:null,stepT:0,swing:0,ph:0};
+  P={x:(HOME_TILE.x+.5)*T,y:(HOME_TILE.y+.8)*T,r:10,fx:0,fy:1,hp:100,food:80,water:80,inf:0,weapon:{id:'pipe',dur:22},bag:{water:1,can:1},eq:{head:null,body:null,pack:null,light:'light'},bat:70,lightOn:false,lightManual:false,atkCd:0,hurt:0,run:false,search:null,stepT:0,swing:0,ph:0};
   Z=[];noises=[];fx=[];thrown=[];alarms=[];
   R=Math.random;
   spawnDay();
@@ -920,6 +1034,9 @@ addEventListener('keydown',e=>{
   if(!G)return;
   if(G.state==='map'&&(e.code==='Escape'||e.code==='KeyM')){closeMap();return}
   if(G.state==='talk'&&e.code==='Escape'){talkEnd();return}
+  if(G.state==='loot'&&(e.code==='Escape'||e.code==='KeyE')){closeLoot();return}
+  if(G.state==='loot'&&e.code==='KeyR'){lootAll();return}
+  if(G.state==='inv'&&(e.code==='Escape'||e.code==='Tab'||e.code==='KeyI')){e.preventDefault();closeInv();return}
   if(e.code==='Escape'){if(G.state==='field')pause();else if(G.state==='pause')resume();return}
   if(G.state!=='field')return;
   if(e.code==='Space'||e.code==='KeyJ'){attack();e.preventDefault()}
@@ -927,6 +1044,8 @@ addEventListener('keydown',e=>{
   else if(e.code==='KeyF'||e.code==='KeyQ')throwFire();
   else if(/^Digit[1-5]$/.test(e.code))quickUse(+e.code.slice(5)-1);
   else if(e.code==='KeyM')openMap();
+  else if(e.code==='KeyL')toggleLight();
+  else if(e.code==='Tab'||e.code==='KeyI'){e.preventDefault();openInv()}
 });
 addEventListener('keyup',e=>{keys[e.code]=false});
 addEventListener('blur',()=>{for(const k in keys)keys[k]=false});
@@ -947,6 +1066,8 @@ document.getElementById('cv').addEventListener('pointerdown',e=>{
 document.getElementById('cv').addEventListener('contextmenu',e=>e.preventDefault());
 $('#pausebtn').addEventListener('click',()=>{if(G&&G.state==='field')pause()});
 $('#mapbtn').addEventListener('click',()=>openMap());
+$('#invbtn').addEventListener('click',()=>openInv());
+$('#lightbtn').addEventListener('click',()=>{if(G&&G.state==='field')toggleLight()});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&G){saveGame();if(G.state==='field')pause()}});
 if(matchMedia('(pointer:coarse)').matches)document.body.classList.add('touch');
 
@@ -977,7 +1098,7 @@ function attack(){
 }
 function killZ(z){
   G.kills++;decals.push({x:z.x,y:z.y,r:12+R()*8,a:R()*6});
-  if(R()<.12&&bagCount()<bagCap()){const id=['cloth','scrap','tape','parts'][R()*4|0];addTo(P.bag,id);fx.push({k:'txt',x:z.x,y:z.y-40,vx:0,vy:-30,t:0,life:1,txt:'+'+ITEMS[id].n,col:'#c6efb8'})}
+  if(R()<.12){const id=['cloth','scrap','tape','parts'][R()*4|0];if(!canCarry(id))return;addTo(P.bag,id);fx.push({k:'txt',x:z.x,y:z.y-40,vx:0,vy:-30,t:0,life:1,txt:'+'+ITEMS[id].n,col:'#c6efb8'})}
 }
 function nearHome(){return G.zone==='gangnam'&&!G.area&&hyp(P.x-(HOME_TILE.x+.5)*T,P.y-(HOME_TILE.y+.5)*T)<48}
 function nearCont(){let b=null,bd=1e9;for(const c of conts){const d=hyp(c.x-P.x,c.y-P.y);if(d<(c.reach||36)&&d<bd){b=c;bd=d}}return b}
@@ -994,17 +1115,7 @@ function finishSearch(){
   if(!c.loot)c.loot=rollLoot(c.type);
   if(c.car&&c.car.alarm&&!c.car.fired){c.car.fired=true;alarm(c.car)}
   if(!c.loot.length){c.empty=true;toast(`${LOOT[c.type].n}: 쓸 만한 게 없다`);return}
-  const got=[];
-  while(c.loot.length){
-    const id=c.loot[0];
-    if(ITEMS[id].wpn&&(P.weapon.id==='fist'||WEAP[id].dmg>WEAP[P.weapon.id].dmg)){
-      c.loot.shift();P.weapon={id,dur:WEAP[id].dur};got.push(ITEMS[id].n+'(장착)');continue;
-    }
-    if(bagCount()>=bagCap())break;
-    c.loot.shift();addTo(P.bag,id);got.push(ITEMS[id].n);
-  }
-  if(got.length)toast('획득: '+got.join(', '),'green');
-  if(c.loot.length)toast('가방이 가득 찼다. 남은 것은 두고 간다','red');else c.empty=true;
+  openLoot(c);
 }
 function rollLoot(k){const o=[];for(const [i,p] of LOOT[k].t)if(R()<p)o.push(i);return o}
 function throwFire(){
@@ -1030,8 +1141,8 @@ function useItem(id,s){
   take(s,id);toast(`${it.n} 사용`,'green');
 }
 function hurtPlayer(z){
-  const t=ZT[z.type];P.hp-=t.dmg*(1+(G.day-1)*.05);P.hurt=.35;shake=7;
-  if(R()<.33){const a=9+(R()*7|0);P.inf=clamp(P.inf+a,0,100);toast(`물렸다! 감염 +${a}`,'red')}
+  const t=ZT[z.type];P.hp-=t.dmg*(1+(G.day-1)*.05)*(1-gearDef());P.hurt=.35;shake=7;
+  if(R()<.33*(1-gearBite())){const a=9+(R()*7|0);P.inf=clamp(P.inf+a,0,100);toast(`물렸다! 감염 +${a}`,'red')}
   for(let i=0;i<6;i++)fx.push({k:'blood',x:P.x,y:P.y-12,vx:(R()-.5)*120,vy:(R()-.5)*120,t:0,life:.5});
   if(P.search)P.search=null;
 }
@@ -1050,7 +1161,7 @@ function update(dt){
   if(mag>0){
     const l=hyp(mx,my);const ux=mx/l,uy=my/l;P.fx=ux;P.fy=uy;
     const weak=P.food<=0||P.water<=0;
-    const spd=(run?150:95)*(weak?.75:1)*(0.5+.5*mag);
+    const load=bagWeight()/capKg(),spd=(run?150:95)*(weak?.75:1)*(0.5+.5*mag)*(1-.25*clamp((load-.6)/.4,0,1));
     move(P,ux*spd*dt,uy*spd*dt);P.ph+=dt*spd*.12;
     P.stepT-=dt;if(P.stepT<=0){P.stepT=run?.35:.6;noise(P.x,P.y,run?150:42,run?1:0,'255,255,255')}
   }
@@ -1062,6 +1173,7 @@ function update(dt){
   // 좀비
   for(const z of Z)updateZ(z,dt,night);
   allyUpdate(dt);finalTick(dt);
+  lightTick(dt,G.t>NIGHT-15||!!G.area||!!ZONES[G.zone].dark);
   for(let i=0;i<Z.length;i++)for(let j=i+1;j<Z.length;j++){
     const a=Z[i],b=Z[j],dx=b.x-a.x,dy=b.y-a.y,d=hyp(dx,dy);
     if(d>0&&d<22){const p=(22-d)/2,ux=dx/d,uy=dy/d;move(a,-ux*p,-uy*p);move(b,ux*p,uy*p)}
@@ -1202,8 +1314,8 @@ function renderBase(){
   }else if(tab==='ally'){
     body=allyTab();
   }else{
-    const ids=['can','ramen','veg','water','bandage','anti','fire'];
-    body=`<div class="mats">가방 <b>${bagCount()}/${bagCap()}</b> · 거점에 들어오면 가방은 자동으로 비워진다</div><div class="list">${ids.map(id=>`<div class="it"><div class="nm">${ITEMS[id].ic} ${ITEMS[id].n}<small>창고 ${G.stash[id]||0}</small></div><button ${P.bag[id]?'':'disabled'} onclick="pack('${id}',-1)">−</button><span class="cnt">${P.bag[id]||0}</span><button ${G.stash[id]&&bagCount()<bagCap()?'':'disabled'} onclick="pack('${id}',1)">+</button></div>`).join('')}</div>`;
+    const ids=['can','ramen','veg','water','bandage','anti','fire','battery',...Object.keys(G.stash).filter(k=>WEAP[k]||GEAR[k])].filter((v,i,a)=>a.indexOf(v)===i);
+    body=`<div class="mats">가방 <b>${kg(bagWeight())}/${capKg()}kg</b> · 거점에 들어오면 가방은 자동으로 비워진다 <button class="btn" style="flex:0;padding:2px 8px;font-size:12px" onclick="openInv(true)">🎒 가방·장비</button></div><div class="list">${ids.map(id=>`<div class="it"><div class="nm">${ITEMS[id].ic} ${ITEMS[id].n}<small>창고 ${G.stash[id]||0}</small></div><button ${P.bag[id]?'':'disabled'} onclick="pack('${id}',-1)">−</button><span class="cnt">${P.bag[id]||0}</span><button ${G.stash[id]&&bagCount()<bagCap()?'':'disabled'} onclick="pack('${id}',1)">+</button></div>`).join('')}</div>`;
   }
   m.innerHTML=`<div class="win"><div class="whead"><div><h2>옥상 거점 · 청운 오피스텔</h2><small>${G.day}일차 · ${clockText()} · 처치 ${G.kills} · 💾 자동 저장됨</small></div></div><div class="tabs">${tabs}</div><div class="wbody">${body}</div><div class="wfoot"><button onclick="leaveBase()">밖으로 나가기</button><button class="pri" onclick="sleep()">잠자기 → ${G.day+1}일차</button></div></div>`;
   m.classList.add('on');
@@ -1225,7 +1337,7 @@ function build(id){
   for(const k in nd)take(G.stash,k,nd[k]);G.fac[id]++;toast(`${FACS[id].n} Lv${G.fac[id]} 완료`,'gold');renderBase();
 }
 function pack(id,d){
-  if(d>0&&G.stash[id]&&bagCount()<bagCap()){take(G.stash,id);addTo(P.bag,id)}
+  if(d>0&&G.stash[id]&&canCarry(id)){take(G.stash,id);addTo(P.bag,id)}
   else if(d<0&&P.bag[id]){take(P.bag,id);addTo(G.stash,id)}
   renderBase();
 }
@@ -1248,7 +1360,7 @@ function sleep(){
   if(G.fac.rain){const n=G.fac.rain*(G.rain?2:1);addTo(G.stash,'water',n);log.push(`빗물 받이: 생수 +${n}${G.rain?' (비 온 날 두 배)':''}`)}
   if(G.fac.garden){addTo(G.stash,'veg',G.fac.garden);log.push(`옥상 텃밭: 채소 +${G.fac.garden}`)}
   crewMorning(fed,log);
-  G.day++;G.t=0;G.warned=G.warn0=0;G.spT=0;G.rain=R()<.3;
+  G.day++;G.t=0;G.warned=G.warn0=0;G.spT=0;P.lightManual=false;G.rain=R()<.3;
   for(const c of conts)if(c.empty&&R()<.3){c.empty=false;c.loot=null}
   for(const id in ZC)if(id!==G.zone)for(const c of ZC[id].conts)if(c.empty&&R()<.3){c.empty=false;c.loot=null}
   for(const k in G.floors){const f=G.floors[k];f.Z=null;if(f.conts)for(const c of f.conts)if(c.empty&&R()<.3){c.empty=false;c.loot=null}}
@@ -1284,7 +1396,7 @@ function saveGame(){
     for(const id in ZONES){const L=zoneLists(id);if(L)zones[id]={conts:L.conts.map(c=>[c.empty?1:0,c.loot]),cars:L.cars.map(c=>c.fired?1:0)}}
     const d={v:2,at:Date.now(),
       G:{day:G.day,t:G.t,seed:G.seed,stash:G.stash,fac:G.fac,kills:G.kills,warned:G.warned||0,warn0:G.warn0||0,rain:!!G.rain,seenBri:G.seenBri||0,surv:G.surv,follow:G.follow||null,zone:G.zone,seenSub:G.seenSub||0,seenNam:G.seenNam||0},
-      P:{x:P.x,y:P.y,fx:P.fx,fy:P.fy,hp:P.hp,food:P.food,water:P.water,inf:P.inf,weapon:{id:P.weapon.id,dur:P.weapon.id==='fist'?0:P.weapon.dur},bag:P.bag},
+      P:{x:P.x,y:P.y,fx:P.fx,fy:P.fy,hp:P.hp,food:P.food,water:P.water,inf:P.inf,weapon:{id:P.weapon.id,dur:P.weapon.id==='fist'?0:P.weapon.dur},bag:P.bag,eq:P.eq,bat:P.bat},
       zones,floors,area:G.area?{bx:G.area.b.x,by:G.area.b.y,f:G.area.f}:null,base:G.state==='base'};
     localStorage.setItem(SAVE_KEY,JSON.stringify(d));G.saveT=15;return true;
   }catch(e){return false}
@@ -1295,7 +1407,7 @@ function loadGame(){
   const zones=d.v===1?{gangnam:{conts:d.conts,cars:d.cars}}:d.zones;
   Object.assign(G,d.G,{floors:{},area:null,floorSave:d.floors||{},zoneSave:zones||{},saveT:15,zone:'gangnam',final:null});
   ZC={};zoneGen('gangnam');if(!d.G.surv)placeSurvivors();
-  Object.assign(P,d.P,{bag:d.P.bag||{},search:null});
+  Object.assign(P,d.P,{bag:d.P.bag||{},search:null,eq:Object.assign({head:null,body:null,pack:null,light:'light'},d.P.eq||{}),bat:d.P.bat??70,lightOn:false,lightManual:false});
   if(P.weapon.id==='fist')P.weapon.dur=Infinity;
   const zid=d.G.zone||'gangnam';
   if(zid!=="gangnam"){Z=[];stashZone();ZC.gangnam.day=-1;zoneGen(zid);G.zone=zid}
@@ -1355,7 +1467,8 @@ function hud(){
   set('Hp',P.hp);set('Food',P.food);set('Water',P.water);set('Inf',P.inf);
   const night=G.t>NIGHT;const c=$('#clock');c.textContent=`${G.day}일차 ${G.rain?'☔':night?'🌙':'☀'} ${clockText()}`;c.classList.toggle('night',night);
   const w=WEAP[P.weapon.id];$('#wpn').textContent=`${w.n} ${P.weapon.id==='fist'?'':P.weapon.dur+'/'+w.dur}`;
-  const bh=(G.area?`<div style="color:#ffd76a">📍 ${G.area.b.name} ${G.area.f}층</div>`:'')+`가방 ${bagCount()}/${bagCap()}`;const be=$('#bagn');if(be._h!==bh){be.innerHTML=bh;be._h=bh}
+  {const lb=$('#lightbtn'),t=P.eq.light?`🔦 ${Math.round(P.bat)}%${P.lightOn?' 켬':''}`:'🔦 없음';if(lb.textContent!==t)lb.textContent=t;lb.style.color=P.lightOn?'#ffd76a':''}
+  const bh=(G.area?`<div style="color:#ffd76a">📍 ${G.area.b.name} ${G.area.f}층</div>`:'')+`가방 ${kg(bagWeight())}/${capKg()}kg`;const be=$('#bagn');if(be._h!==bh){be.innerHTML=bh;be._h=bh}
   const q=QUICK.map(([k,ic,n],i)=>{const id=k==='food'?bestFood(P.bag):k;const cnt=k==='food'?(P.bag.can||0)+(P.bag.ramen||0)+(P.bag.veg||0):(P.bag[k]||0);return `<button data-q="${i}" ${cnt?'':'disabled'}>${ic}${n}<em>${cnt}</em></button>`}).join('');
   const qe=$('#quick');if(qe._h!==q){qe.innerHTML=q;qe._h=q}
   let p='';
@@ -1453,17 +1566,22 @@ function render0(){
   if(P.search){const k=P.search.t/searchTime();ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillRect(P.x-20,P.y-46,40,6);ctx.fillStyle='#e6b94c';ctx.fillRect(P.x-20,P.y-46,40*k,6)}
   // 밤
   ctx.setTransform(RS,0,0,RS,0,0);
-  const nk=Math.max(clamp((G.t-NIGHT+25)/30,0,1),(G.area||ZONES[G.zone].dark)?.62:0),dusk=(G.area||ZONES[G.zone].dark)?0:1*clamp((G.t-NIGHT+50)/30,0,1)*(1-nk);
+  // 빛: 낮 바깥은 햇빛(따뜻한 색), 밤·지하·건물 안은 어둠 — 손전등을 켜야 앞이 보인다
+  const nightK=clamp((G.t-NIGHT+25)/30,0,1),inDark=!!(G.area||ZONES[G.zone].dark),dayIn=G.t<NIGHT-20;
+  const nk=inDark?Math.max(G.area&&dayIn?.55:.88,nightK):nightK,dusk=inDark?0:clamp((G.t-NIGHT+50)/30,0,1)*(1-nk);
+  if(!inDark&&nightK<1){ctx.globalCompositeOperation='soft-light';ctx.fillStyle=`rgba(255,214,150,${.32*(1-nightK)})`;ctx.fillRect(0,0,W,H);ctx.globalCompositeOperation='source-over'}
   if(dusk>0){ctx.fillStyle=`rgba(190,90,40,${.18*dusk})`;ctx.fillRect(0,0,W,H)}
   if(nk>0){
     dctx.setTransform(RS,0,0,RS,0,0);dctx.globalCompositeOperation='source-over';dctx.clearRect(0,0,W,H);
-    dctx.fillStyle=`rgba(4,6,16,${.86*nk})`;dctx.fillRect(0,0,W,H);
+    dctx.fillStyle=`rgba(4,6,16,${.97*nk})`;dctx.fillRect(0,0,W,H);
     dctx.globalCompositeOperation='destination-out';
     const p=toScreen(P.x,P.y-10);
-    let g=dctx.createRadialGradient(p.x,p.y,10,p.x,p.y,95*zoom);g.addColorStop(0,'rgba(0,0,0,1)');g.addColorStop(1,'rgba(0,0,0,0)');dctx.fillStyle=g;dctx.beginPath();dctx.arc(p.x,p.y,95*zoom,0,7);dctx.fill();
-    const fa=Math.atan2(P.fy,P.fx),L=280*zoom;
-    g=dctx.createRadialGradient(p.x,p.y,20,p.x,p.y,L);g.addColorStop(0,'rgba(0,0,0,.95)');g.addColorStop(1,'rgba(0,0,0,0)');dctx.fillStyle=g;
-    dctx.beginPath();dctx.moveTo(p.x,p.y);dctx.arc(p.x,p.y,L,fa-.45,fa+.45);dctx.closePath();dctx.fill();
+    const lit=lightActive(),pr=(lit?90:44)*zoom;
+    let g=dctx.createRadialGradient(p.x,p.y,8,p.x,p.y,pr);g.addColorStop(0,`rgba(0,0,0,${lit?1:.85})`);g.addColorStop(1,'rgba(0,0,0,0)');dctx.fillStyle=g;dctx.beginPath();dctx.arc(p.x,p.y,pr,0,7);dctx.fill();
+    if(lit){const fa=Math.atan2(P.fy,P.fx),L=300*zoom*(P.bat<15?.6:1);
+    g=dctx.createRadialGradient(p.x,p.y,20,p.x,p.y,L);g.addColorStop(0,'rgba(0,0,0,.97)');g.addColorStop(1,'rgba(0,0,0,0)');dctx.fillStyle=g;
+    dctx.beginPath();dctx.moveTo(p.x,p.y);dctx.arc(p.x,p.y,L,fa-.42,fa+.42);dctx.closePath();dctx.fill()}
+    if(ALLY){const q=toScreen(ALLY.x,ALLY.y-10);g=dctx.createRadialGradient(q.x,q.y,4,q.x,q.y,36*zoom);g.addColorStop(0,'rgba(0,0,0,.6)');g.addColorStop(1,'rgba(0,0,0,0)');dctx.fillStyle=g;dctx.beginPath();dctx.arc(q.x,q.y,36*zoom,0,7);dctx.fill()}
     for(const f of thrown)if(f.st==='burn'){const q=toScreen(f.x,f.y);g=dctx.createRadialGradient(q.x,q.y,5,q.x,q.y,80*zoom);g.addColorStop(0,'rgba(0,0,0,.9)');g.addColorStop(1,'rgba(0,0,0,0)');dctx.fillStyle=g;dctx.beginPath();dctx.arc(q.x,q.y,80*zoom,0,7);dctx.fill()}
     if(VLOOK!=='basic')noirNightCut();
     for(const sh of SHAFTS){dctx.fillStyle='rgba(0,0,0,.32)';dctx.beginPath();sh.forEach(([x,y],i)=>{const q=toScreen(x,y);i?dctx.lineTo(q.x,q.y):dctx.moveTo(q.x,q.y)});dctx.fill()}

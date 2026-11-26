@@ -24,6 +24,7 @@
 | 화면 분위기 | 기본 `VLOOK='pixel'`(도트: `render`가 `lo` 작은 캔버스에 `render0`을 그리고 `pixelBlit`이 `PAL` 32색+`BAYER` 디더링 후 각지게 확대, 글자는 `loctx.fillText`가 `TXT`에 모아 선명하게 다시 씀. 화면 크기 변환은 `RS`, 한 칸 픽셀 `PXS`). 그 밖에 'noir'·'basic'(주소 `?look=`·일시정지 `toggleLook`, localStorage `seoul-survivor-look2`). `drawShafts`/`SHAFTS` 실내 창문 빛줄기. `noirPass`(1차 그림 후 채도 빼기 → 간판·피·반짝임·사람/좀비만 색으로 다시), `NEON`·`noirNightCut`·`noirNightGlow`(밤 간판 빛), `drawRain`. 날씨: `G.rain`(잠잘 때 30%), `raining()`(바깥에서만): 소리×.7·좀비 시야×.85·갈증×.5·빗물 받이×2. 주소 `&rain=1`은 강제 비 |
 | 재난문자 | `sms(kind,from,text)`(kind 'urgent'·'safe'), `SMSQ`, `smsNext`, `morningSms`(아침 확인 버튼에서). 노선도는 `openMap`의 `.ln` |
 | 그림 | `ART_READY`/`ART`, `drawSheet`(3열×4행 걷기 시트: 아래·왼·오른·위), `drawProp`, `pat`(바닥 무늬, `TILE_ART`·`FLOOR_ART`). 사람·좀비·동료는 `player`·`z_<종류>`·`ally_<id>` 그림이 있으면 그것, 없으면 코드 그림. 차는 `car_*`·`bus_blue`·`truck_army`. 거리 소품은 decals의 `k`(gen 끝에서 별도 난수) |
+| 가방·장비 | 무게: `WT`(kg), `bagWeight`/`capKg`(15+배낭10+도윤6)/`canCarry`. 장비: `GEAR`(slot·def·bite·cap), `P.eq{head,body,pack,light}`, `gearDef`/`gearBite`(hurtPlayer). 창: `openLoot`/`renderLoot`/`lootTake`/`lootAll`/`closeLoot`(G.state 'loot', 뒤지기 끝나면), `openInv`/`renderInv`/`invUse`/`invEquip`/`invUnequip`/`invDrop`(G.state 'inv'). 손전등 `P.bat`·`P.lightOn`·`lightActive`·`toggleLight`·`lightTick`(어두우면 자동 켬). 빛은 render0의 `nightK`/`inDark`/`nk`(밤·실내 어둠 .97) |
 | 상태 | `G`(day·t·state·stash·fac·kills), `P`(플레이어), `Z`(좀비), `noises`, `thrown`, `alarms` |
 | 판정 | `hitsSolid`, `move`, `los`, `bfs`, `fieldDir` |
 | 소리 | `noise(x,y,r,show)`, `scream`, `alarm` |
@@ -32,5 +33,5 @@
 | 거점 | `openBase`, `renderBase`, `craft`, `build`, `pack`, `sleep`(하루 정산·습격) |
 | 그리기 | `render`, `drawBuilding`(그림을 자기 땅 안에: 위는 지붕·아래는 앞면, 높은 빌딩만 48px 넘침. 골목이 가려지지 않게), `drawZombie`, `drawPlayer`, 밤 어둠 `dk` |
 
-- `G.state`: `field` → `base`(거점 창) / `map` / `pause` → `over`. 건물 안에 있어도 state는 `field`이고 `G.area`로 구별한다. 잠은 거리의 거점에서만 잔다.
+- `G.state`: `field` → `base`(거점 창) / `map` / `loot` / `inv` / `talk` / `pause` → `over`. 건물 안에 있어도 state는 `field`이고 `G.area`로 구별한다. 잠은 거리의 거점에서만 잔다.
 - 하루 길이 `DAY=240`초, 밤 시작 `NIGHT=150`초. 날짜 제한 없음, 승리는 남산 송신.

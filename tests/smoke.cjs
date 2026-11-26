@@ -23,14 +23,24 @@ const url=process.argv[2]||'http://127.0.0.1:8795',out=process.argv[3];
       openMap();r.line=$('#modal .ln .st.cur')?.textContent.includes('강남역');closeMap();
       return r});
     ok(Object.values(look).every(Boolean),`${vp.w}: 무채색 기본·재난문자·비·노선도 ${JSON.stringify(look)}`);
+    // 가방 무게·장비·손전등
+    const inv=await p.evaluate(()=>{
+      const r={};P.bag={};r.cap=capKg()===15;P.bag.scrap=15;r.full=!canCarry('scrap');
+      P.bag={backpack:1};openInv();r.win=G.state==='inv';invEquip('backpack');r.bigger=capKg()===25&&!P.bag.backpack;
+      P.bag={vest:1};invEquip('vest');r.vest=P.eq.body==='vest'&&gearDef()>=.25;
+      Z=[];spawnZ(P.x+15,P.y);const h=P.hp;hurtPlayer(Z[0]);r.def=h-P.hp<ZT.walker.dmg;Z=[];
+      P.bat=50;P.lightOn=true;r.lit=lightActive();P.bag={battery:1};invUse('battery');r.bat=P.bat===100&&!P.bag.battery;
+      closeInv();r.back=G.state==='field';P.eq.body=null;P.eq.pack=null;P.bag={};P.lightOn=false;
+      return r});
+    ok(Object.values(inv).every(Boolean),`${vp.w}: 가방 무게·장비·손전등 ${JSON.stringify(inv)}`);
     // 지도 연결성: 거점에서 모든 뒤질 것까지 갈 수 있다
     ok(await p.evaluate(()=>{const D=bfs((HOME_TILE.x+.5)*T,(HOME_TILE.y+.5)*T);return conts.every(c=>{const tx=c.x/T|0,ty=c.y/T|0;if(c.car){for(const [i,j] of [[-1,0],[1,0],[0,-1],[0,1],[2,0],[0,2],[-1,1],[1,-1]])if(D[(c.car.y+j)*MW+c.car.x+i]>=0)return true;return false}return D[ty*MW+tx]>=0})}),`${vp.w}: 모든 뒤질 것에 갈 수 있다`);
     // 걷기
     await p.evaluate(()=>{keys.KeyS=true});await p.waitForTimeout(600);await p.evaluate(()=>{keys.KeyS=false});
     ok(await p.evaluate(()=>P.y>(HOME_TILE.y+1)*T),`${vp.w}: 이동`);
     // 뒤지기
-    const got=await p.evaluate(async()=>{const c=conts.find(c=>c.type==='mart');P.x=c.x;P.y=c.y+20;Z=Z.filter(z=>hyp(z.x-P.x,z.y-P.y)>400);const before=Object.values(P.bag).reduce((a,b)=>a+b,0)+(P.weapon.id!=='pipe'?1:0);interact();await new Promise(r=>setTimeout(r,1700));return {s:!!P.search,c:c.empty||c.loot!==null}});
-    ok(!got.s&&got.c,`${vp.w}: 편의점 선반 뒤지기 완료`);
+    const got=await p.evaluate(async()=>{const c=conts.find(c=>c.type==='mart');P.x=c.x;P.y=c.y+20;Z=Z.filter(z=>hyp(z.x-P.x,z.y-P.y)>400);const before=Object.values(P.bag).reduce((a,b)=>a+b,0)+(P.weapon.id!=='pipe'?1:0);interact();await new Promise(r=>setTimeout(r,1700));const win=G.state==='loot'&&$('#modal').textContent.includes('전부 줍기');const n0=Object.keys(P.bag).length;lootAll();closeLoot();return {s:!!P.search,c:(c.empty||c.loot!==null)&&win&&G.state==='field'&&Object.keys(P.bag).length>=n0}});
+    ok(!got.s&&got.c,`${vp.w}: 편의점 선반 뒤지기 → 전리품 창 → 전부 줍기`);
     // 소리 → 좀비 조사
     ok(await p.evaluate(()=>{spawnZ(P.x+150,P.y);const z=Z[Z.length-1];z.fx=1;z.fy=0;noise(P.x,P.y,200,1);return z.state==='inv'}),`${vp.w}: 소리를 듣고 조사`);
     // 공격
@@ -47,7 +57,7 @@ const url=process.argv[2]||'http://127.0.0.1:8795',out=process.argv[3];
       const D=bfs(P.x,P.y);r.reach=conts.every(c=>D[(c.y/T|0)*MW+(c.x/T|0)]>=0);
       let up=null;for(let i=0;i<MW*MH;i++)if(tile[i]===8)up=i;r.upReach=up!==null&&D[up]>=0;
       P.x=(up%MW+.5)*T;P.y=((up/MW|0)+.5)*T;Z=[];interact();r.f2=G.area&&G.area.f===2;
-      const c=conts[0];if(c){Z=[];P.x=c.x;P.y=c.y+14;interact();await new Promise(z=>setTimeout(z,1700));r.searched=c.empty||c.loot!==null}else r.searched=true;
+      const c=conts[0];if(c){Z=[];P.x=c.x;P.y=c.y+14;interact();await new Promise(z=>setTimeout(z,1700));r.searched=c.empty||c.loot!==null;if(G.state==='loot')closeLoot()}else r.searched=true;
       let dn=null;for(let i=0;i<MW*MH;i++)if(tile[i]===9)dn=i;P.x=(dn%MW+.5)*T;P.y=((dn/MW|0)+.5)*T;Z=[];interact();r.back1=G.area&&G.area.f===1;
       const kept=G.floors[`${b.x},${b.y},2`].conts[0];r.kept=!c||kept===c;
       let ex=null;for(let i=0;i<MW*MH;i++)if(tile[i]===10)ex=i;P.x=(ex%MW+.5)*T;P.y=((ex/MW|0)+.5)*T;interact();
