@@ -8,7 +8,7 @@
 :root{--bg:#0d0f12;--ink:#ece7db;--dim:#9b968a;--accent:#e6b94c;--red:#e0574d;--green:#7fbf6a;--blue:#5aa7e0;--panel:rgba(20,22,26,.96);--line:rgba(255,255,255,.13)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
-canvas{display:block;position:fixed;inset:0;width:100%;height:100%}
+#cv{display:block;position:fixed;inset:0;width:100%;height:100%}
 button{font:inherit;color:inherit;cursor:pointer}
 #hud{position:fixed;left:0;right:0;top:0;padding:calc(6px + env(safe-area-inset-top)) 8px 0;pointer-events:none;display:flex;flex-direction:column;gap:5px;z-index:5}
 #hud .row{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
@@ -21,10 +21,6 @@ button{font:inherit;color:inherit;cursor:pointer}
 #clock{font-size:15px;font-weight:700;color:var(--accent)}
 #clock.night{color:#8fa8ff}
 #pausebtn,#mapbtn,#invbtn,#lightbtn{border:1px solid var(--line);background:rgba(255,255,255,.06);border-radius:6px;padding:1px 7px;font-size:11px;margin-top:2px}
-#quick{display:flex;gap:5px;pointer-events:auto;flex-wrap:wrap}
-#quick button{border:1px solid var(--line);background:rgba(0,0,0,.55);border-radius:9px;padding:4px 8px;font-size:12px;display:flex;align-items:center;gap:3px;min-height:30px}
-#quick button:disabled{opacity:.35}
-#quick button em{font-style:normal;color:var(--accent);font-weight:700}
 #toasts{position:fixed;top:calc(112px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none;z-index:6;width:92vw}
 .toast{background:rgba(0,0,0,.72);padding:5px 12px;border-radius:14px;font-size:13px;animation:tf 2.8s forwards;text-align:center}
 .toast.red{color:#ffb2aa;border:1px solid rgba(224,87,77,.5)}
@@ -39,7 +35,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 #sms .sb{padding:8px 12px 10px;font-size:13px;line-height:1.5;color:#eee}
 #sms .sb b{color:#ffcf8a}
 #prompt{position:fixed;left:50%;bottom:calc(150px + env(safe-area-inset-bottom));transform:translateX(-50%);background:rgba(0,0,0,.7);border:1px solid rgba(230,185,76,.5);padding:6px 14px;border-radius:16px;font-size:13px;pointer-events:none;z-index:5;white-space:nowrap;display:none}
-body:not(.touch) #prompt{bottom:28px}
+body:not(.touch) #prompt{bottom:86px}
 #joyzone,#btns{display:none}
 body.touch #joyzone{display:block;position:fixed;left:0;bottom:0;width:50%;height:55%;z-index:4}
 #joy{position:absolute;width:112px;height:112px;border-radius:50%;border:2px solid rgba(255,255,255,.2);background:rgba(0,0,0,.25);left:26px;bottom:calc(26px + env(safe-area-inset-bottom));pointer-events:none}
@@ -96,7 +92,21 @@ body.touch #btns{display:grid;position:fixed;right:14px;bottom:calc(18px + env(s
 .big .keys{font-size:12px;color:var(--dim);text-align:left;background:rgba(255,255,255,.04);border-radius:8px;padding:8px 12px;line-height:1.7}
 .big .btn{display:block;width:100%;margin-top:10px}
 body:not(.ingame) #hud,body:not(.ingame) #btns,body:not(.ingame) #joyzone,body:not(.ingame) #prompt{display:none!important}
-@media (max-width:380px){#quick button{padding:3px 6px;font-size:11px}#bars{width:56vw}}
+#mini{display:block;width:110px;height:110px;border-radius:8px;border:1px solid var(--line);margin:4px 0 4px auto;cursor:pointer;background:#08080c}
+#info .ib{display:flex;gap:4px;justify-content:flex-end}
+#hotbar{display:flex;gap:4px;pointer-events:auto;justify-content:center}
+#hotbar button{position:relative;width:40px;height:40px;border:1px solid rgba(255,255,255,.18);background:rgba(10,10,16,.75);border-radius:8px;padding:0;display:flex;align-items:center;justify-content:center;font-size:19px;line-height:1}
+#hotbar button:disabled{opacity:.35}
+#hotbar b{position:absolute;left:3px;top:1px;font-size:9px;color:var(--dim)}
+#hotbar em{position:absolute;right:3px;bottom:1px;font-style:normal;font-size:10px;font-weight:700;color:var(--accent)}
+#hotbar i{position:absolute;left:5px;right:5px;bottom:3px;height:3px;border-radius:2px;background:rgba(255,255,255,.15);overflow:hidden}
+#hotbar i u{display:block;height:100%}
+#hotbar .wp{width:52px;border-color:rgba(230,185,76,.6)}
+#hotbar .on{border-color:#ffd76a;box-shadow:0 0 8px rgba(255,215,106,.55)}
+#hotbar .gap{width:5px}
+@media (min-width:600px){#hotbar{position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom));transform:translateX(-50%);gap:6px}#hotbar button{width:48px;height:48px;font-size:22px}#hotbar .wp{width:62px}#mini{width:150px;height:150px}}
+@media (max-height:500px){#mini{width:96px;height:96px}}
+@media (max-width:380px){#hotbar button{width:35px;height:35px;font-size:16px}#hotbar .wp{width:44px}#bars{width:56vw}#mini{width:96px;height:96px}}
 </style>
 </head>
 <body>
@@ -109,9 +119,9 @@ body:not(.ingame) #hud,body:not(.ingame) #btns,body:not(.ingame) #joyzone,body:n
       <span>💧 갈증</span><div class="bar"><i id="bWater" style="background:#5aa7e0"></i></div><b id="nWater"></b>
       <span>☣ 감염</span><div class="bar"><i id="bInf" style="background:#9be05a"></i></div><b id="nInf"></b>
     </div>
-    <div id="info"><div id="clock"></div><div id="wpn"></div><div id="bagn"></div><button id="invbtn">🎒 가방</button> <button id="lightbtn">🔦</button><br><button id="mapbtn">🗺 지도</button> <button id="pausebtn">Ⅱ 일시정지</button></div>
+    <div id="info"><div id="clock"></div><div id="bagn"></div><canvas id="mini" title="전체 지도"></canvas><div class="ib"><button id="mapbtn">🗺 지도</button><button id="pausebtn">Ⅱ</button></div></div>
   </div>
-  <div id="quick"></div>
+  <div id="hotbar"></div>
 </div>
 <div id="toasts"></div>
 <div id="sms"></div>
@@ -1066,8 +1076,7 @@ document.getElementById('cv').addEventListener('pointerdown',e=>{
 document.getElementById('cv').addEventListener('contextmenu',e=>e.preventDefault());
 $('#pausebtn').addEventListener('click',()=>{if(G&&G.state==='field')pause()});
 $('#mapbtn').addEventListener('click',()=>openMap());
-$('#invbtn').addEventListener('click',()=>openInv());
-$('#lightbtn').addEventListener('click',()=>{if(G&&G.state==='field')toggleLight()});
+$('#mini').addEventListener('click',()=>openMap());
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&G){saveGame();if(G.state==='field')pause()}});
 if(matchMedia('(pointer:coarse)').matches)document.body.classList.add('touch');
 
@@ -1466,11 +1475,14 @@ function hud(){
   const set=(id,v)=>{$('#b'+id).style.width=clamp(v,0,100)+'%';$('#n'+id).textContent=v|0};
   set('Hp',P.hp);set('Food',P.food);set('Water',P.water);set('Inf',P.inf);
   const night=G.t>NIGHT;const c=$('#clock');c.textContent=`${G.day}일차 ${G.rain?'☔':night?'🌙':'☀'} ${clockText()}`;c.classList.toggle('night',night);
-  const w=WEAP[P.weapon.id];$('#wpn').textContent=`${w.n} ${P.weapon.id==='fist'?'':P.weapon.dur+'/'+w.dur}`;
-  {const lb=$('#lightbtn'),t=P.eq.light?`🔦 ${Math.round(P.bat)}%${P.lightOn?' 켬':''}`:'🔦 없음';if(lb.textContent!==t)lb.textContent=t;lb.style.color=P.lightOn?'#ffd76a':''}
-  const bh=(G.area?`<div style="color:#ffd76a">📍 ${G.area.b.name} ${G.area.f}층</div>`:'')+`가방 ${kg(bagWeight())}/${capKg()}kg`;const be=$('#bagn');if(be._h!==bh){be.innerHTML=bh;be._h=bh}
-  const q=QUICK.map(([k,ic,n],i)=>{const id=k==='food'?bestFood(P.bag):k;const cnt=k==='food'?(P.bag.can||0)+(P.bag.ramen||0)+(P.bag.veg||0):(P.bag[k]||0);return `<button data-q="${i}" ${cnt?'':'disabled'}>${ic}${n}<em>${cnt}</em></button>`}).join('');
-  const qe=$('#quick');if(qe._h!==q){qe.innerHTML=q;qe._h=q}
+  const bh=(G.area?`<div style="color:#ffd76a">📍 ${G.area.b.name} ${G.area.f}층</div>`:'')+`${ZONES[G.zone].n}`;const be=$('#bagn');if(be._h!==bh){be.innerHTML=bh;be._h=bh}
+  const w=WEAP[P.weapon.id],wid=P.weapon.id,dr=wid==='fist'?1:P.weapon.dur/w.dur,load=bagWeight()/capKg();
+  const q=`<button class="wp" data-k="w" title="${w.n}${wid==='fist'?'':` ${P.weapon.dur}/${w.dur}`}">${wid==='fist'?'👊':ITEMS[wid].ic}${wid==='fist'?'':`<i><u style="width:${dr*100|0}%;background:${dr<.3?'#e0574d':'#7fbf6a'}"></u></i>`}</button><span class="gap"></span>`+
+    QUICK.map(([k,ic,n],i)=>{const cnt=k==='food'?(P.bag.can||0)+(P.bag.ramen||0)+(P.bag.veg||0):(P.bag[k]||0);return `<button data-k="${i}" title="${n}" ${cnt?'':'disabled'}><b>${i+1}</b>${ic}${cnt?`<em>${cnt}</em>`:''}</button>`}).join('')+
+    `<span class="gap"></span><button data-k="l" class="${P.lightOn&&P.bat>0?'on':''}" title="손전등 (L)" ${P.eq.light?'':'disabled'}>🔦<i><u style="width:${P.bat|0}%;background:${P.bat<20?'#e0574d':'#ffd76a'}"></u></i></button>`+
+    `<button data-k="b" title="가방 (Tab)">🎒<i><u style="width:${Math.min(100,load*100)|0}%;background:${load>.85?'#e0574d':'#5aa7e0'}"></u></i></button>`;
+  const qe=$('#hotbar');if(qe._h!==q){qe.innerHTML=q;qe._h=q}
+  drawMini();
   let p='';
   if(G.state==='field'){
     if(P.search)p=`뒤지는 중… 움직이면 멈춘다`;
@@ -1484,7 +1496,7 @@ function hud(){
   $('#toasts').style.top=($('#hud').getBoundingClientRect().bottom+6)+'px';
   const pe=$('#prompt');pe.textContent=p;pe.style.display=p?'block':'none';
 }
-$('#quick').addEventListener('pointerdown',e=>{const b=e.target.closest('button');if(!b||!G||G.state!=='field')return;e.preventDefault();quickUse(+b.dataset.q)});
+$('#hotbar').addEventListener('pointerdown',e=>{const b=e.target.closest('button');if(!b||!G||G.state!=='field')return;e.preventDefault();const k=b.dataset.k;if(k==='w'||k==='b')openInv();else if(k==='l')toggleLight();else quickUse(+k)});
 
 /* ───────── 그리기 ───────── */
 const cv=$('#cv'),mctx=cv.getContext('2d');let ctx=mctx;
@@ -1782,6 +1794,39 @@ function openMap(){
   }
   c.fillStyle='#ff5a4a';c.beginPath();c.arc(PX,PY,1.4,0,7);c.fill();
   c.strokeStyle='#ff5a4a';c.lineWidth=.6;c.beginPath();c.moveTo(PX,PY);c.lineTo(PX+P.fx*3,PY+P.fy*3);c.stroke();
+}
+/* 미니맵: 지금 구역(건물 안이면 그 층)을 1칸=1점 그림으로 한 번 만들어 두고, 주인공 주변 44칸을 잘라 보여 준다 */
+const MINI={key:null,cv:document.createElement('canvas')};
+const MCOL={0:[58,61,66],1:[87,84,77],2:[62,73,52],3:[74,70,64],4:[106,53,50],5:[91,88,82],6:[36,33,30],7:[8,8,10],8:[140,120,80],9:[140,120,80],10:[60,120,80],11:[31,58,77],12:[59,54,49],13:[109,106,100],15:[138,134,128],16:[122,106,74]};
+function miniBase(){
+  const key=G.seed+'|'+G.zone+'|'+(G.area?G.area.b.x+','+G.area.b.y+','+G.area.f:'');if(MINI.key===key)return MINI.cv;MINI.key=key;
+  const c=MINI.cv;c.width=MW;c.height=MH;const x=c.getContext('2d'),im=x.createImageData(MW,MH);
+  for(let i=0;i<MW*MH;i++){const col=MCOL[tile[i]]||[30,30,30];im.data[i*4]=col[0];im.data[i*4+1]=col[1];im.data[i*4+2]=col[2];im.data[i*4+3]=255}
+  x.putImageData(im,0,0);
+  for(const b of buildings){x.fillStyle=b.home?'#e6b94c':b.kind==='tower'?'#4d6478':'#77707e';x.fillRect(b.x,b.y,b.w,b.h);if(!b.home&&b.col){x.fillStyle=b.col;x.fillRect(b.x,b.y+b.h-1,b.w,1)}}
+  x.fillStyle='#2c3a27';for(const t of trees)x.fillRect(t.x/T|0,t.y/T|0,1,1);
+  x.fillStyle='#4a4f55';for(const c2 of cars)x.fillRect(c2.x,c2.y,c2.w,c2.h);
+  return c;
+}
+function drawMini(){
+  const cv=$('#mini');if(!cv||!G)return;const S=cv.clientWidth;if(!S)return;const d=Math.min(2,devicePixelRatio||1);
+  if(cv.width!==S*d){cv.width=S*d;cv.height=S*d}
+  const c=cv.getContext('2d');c.setTransform(d,0,0,d,0,0);c.imageSmoothingEnabled=false;c.fillStyle='#08080c';c.fillRect(0,0,S,S);
+  const RR=22,sc=S/(RR*2),px=P.x/T,py=P.y/T,M=(x,y)=>[(x-px+RR)*sc,(y-py+RR)*sc];
+  c.save();c.translate((RR-px)*sc,(RR-py)*sc);c.scale(sc,sc);c.drawImage(miniBase(),0,0);c.restore();
+  const now=performance.now();
+  if(!G.area){
+    for(const l of links){const [x,y]=M(l.x+.5,l.y+.5);c.fillStyle=l.to==='final'?'#ff8a5a':'#ffd76a';c.fillRect(x-2.5,y-2.5,5,5)}
+    if(G.zone==='gangnam'){const [x,y]=M(HOME_TILE.x+.5,HOME_TILE.y+.5);c.fillStyle='#e6b94c';c.font='bold 13px sans-serif';c.textAlign='center';c.fillText('★',x,y+4)
+      for(const id of SURV_ORDER){const sv=G.surv[id];if(sv.st!=='lost'||!hinted(id))continue;const b=survBuilding(sv);if(!b)continue;const [bx,by]=M(b.x+b.w/2,b.y+b.h/2);c.fillStyle='#ffd76a';c.beginPath();c.arc(bx,by,4,0,7);c.fill();c.fillStyle='#2a1f10';c.font='bold 8px sans-serif';c.fillText('?',bx,by+3)}}
+  }else{for(let i=0;i<MW*MH;i++){const t=tile[i];if(t<8||t>10)continue;const [x,y]=M(i%MW+.5,(i/MW|0)+.5);c.fillStyle=t===10?'#7fe08a':'#ffd76a';c.fillRect(x-2,y-2,4,4)}}
+  for(const n of NPCS){const [x,y]=M(n.x/T,n.y/T);c.fillStyle='#ffd76a';c.fillRect(x-2,y-2,4,4)}
+  const seeR=lightActive()?9:(G.t>NIGHT||G.area||ZONES[G.zone].dark)?3:8;
+  for(const z of Z){const dx=z.x/T-px,dy=z.y/T-py,dd=Math.hypot(dx,dy);if(dd>RR)continue;if(z.state!=='chase'&&dd>seeR)continue;const [x,y]=M(z.x/T,z.y/T);c.fillStyle=z.state==='chase'?'#ff4a3a':'#c0504a';c.fillRect(x-1.5,y-1.5,3,3)}
+  if(ALLY){const [x,y]=M(ALLY.x/T,ALLY.y/T);c.fillStyle='#6fc3ff';c.fillRect(x-2,y-2,4,4)}
+  if(G.final&&G.zone==='namsan'){const [x,y]=M(G.final.x/T,G.final.y/T);c.strokeStyle='#ff8a5a';c.beginPath();c.arc(x,y,6*sc,0,7);c.stroke()}
+  c.save();c.translate(S/2,S/2);c.rotate(Math.atan2(P.fy,P.fx));c.fillStyle='#fff';c.beginPath();c.moveTo(6,0);c.lineTo(-4,-4);c.lineTo(-2,0);c.lineTo(-4,4);c.closePath();c.fill();c.restore();
+  if(noises.some(n=>n.t<.3&&n.r>300)&&Math.sin(now/90)>0){c.strokeStyle='rgba(255,90,80,.7)';c.lineWidth=2;c.strokeRect(1,1,S-2,S-2)}
 }
 function closeMap(){$('#modal').classList.remove('on');if(G&&G.state==='map'){G.state='field';last=performance.now()}}
 function drawCar(c){

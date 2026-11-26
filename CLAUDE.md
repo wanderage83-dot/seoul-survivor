@@ -25,6 +25,7 @@
 | 재난문자 | `sms(kind,from,text)`(kind 'urgent'·'safe'), `SMSQ`, `smsNext`, `morningSms`(아침 확인 버튼에서). 노선도는 `openMap`의 `.ln` |
 | 그림 | `ART_READY`/`ART`, `drawSheet`(3열×4행 걷기 시트: 아래·왼·오른·위), `drawProp`, `pat`(바닥 무늬, `TILE_ART`·`FLOOR_ART`). 사람·좀비·동료는 `player`·`z_<종류>`·`ally_<id>` 그림이 있으면 그것, 없으면 코드 그림. 차는 `car_*`·`bus_blue`·`truck_army`. 거리 소품은 decals의 `k`(gen 끝에서 별도 난수) |
 | 가방·장비 | 무게: `WT`(kg), `bagWeight`/`capKg`(15+배낭10+도윤6)/`canCarry`. 장비: `GEAR`(slot·def·bite·cap), `P.eq{head,body,pack,light}`, `gearDef`/`gearBite`(hurtPlayer). 창: `openLoot`/`renderLoot`/`lootTake`/`lootAll`/`closeLoot`(G.state 'loot', 뒤지기 끝나면), `openInv`/`renderInv`/`invUse`/`invEquip`/`invUnequip`/`invDrop`(G.state 'inv'). 손전등 `P.bat`·`P.lightOn`·`lightActive`·`toggleLight`·`lightTick`(어두우면 자동 켬). 빛은 render0의 `nightK`/`inDark`/`nk`(밤·실내 어둠 .97) |
+| 화면 구성(HUD) | `#info`(시계·구역·`#mini` 미니맵·지도/일시정지 버튼), `drawMini`/`miniBase`(구역·층 바뀌면 1칸=1점 그림을 다시 만들고 주변 44칸을 보여 줌), `#hotbar`(무기·1~5 빠른 사용·🔦·🎒, `hud`가 그림. 600px 이상은 아래 가운데 고정). `#cv`만 화면 전체 캔버스 |
 | 상태 | `G`(day·t·state·stash·fac·kills), `P`(플레이어), `Z`(좀비), `noises`, `thrown`, `alarms` |
 | 판정 | `hitsSolid`, `move`, `los`, `bfs`, `fieldDir` |
 | 소리 | `noise(x,y,r,show)`, `scream`, `alarm` |
