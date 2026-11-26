@@ -14,9 +14,14 @@ PROPS={'props_street':[('car_sedan',20),('car_taxi',20),('bus_blue',30),('car_po
        'props_misc':[('sign_board',14),('barricade',16),('sandbags',12),('crate_army',12),('tree_ginkgo',40),('fridge',26),('shelf',22),('desk',18),('wardrobe',28)]}
 TILES=['t_asphalt','t_sidewalk','t_alley','t_grass','t_floor_wood','t_floor_tile','t_subway','t_water']
 done=[]
+from PIL import ImageEnhance
+def pop(f,name):
+    # 사람·좀비는 어두운 거리에서 보이도록 밝기·대비·채도를 올린다
+    im=Image.open(f).convert('RGB');im=ImageEnhance.Brightness(im).enhance(1.3);im=ImageEnhance.Contrast(im).enhance(1.25);im=ImageEnhance.Color(im).enhance(1.35)
+    t=f'/tmp/_pop_{name}.png';im.save(t);return t
 for c in CHARS:
     f=raw(c)
-    if f:sheet(f,3,4,24).save(f'{OUT}/{c}.png');done.append(c)
+    if f:sheet(pop(f,c),3,4,24).save(f'{OUT}/{c}.png');done.append(c)
 for sh,items in PROPS.items():
     f=raw(sh)
     if not f:continue

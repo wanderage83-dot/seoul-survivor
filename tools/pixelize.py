@@ -15,7 +15,8 @@ def unbg(im,tol=60):
     # 마젠타 배경이면 「마젠타스러운」 픽셀(경계 번짐 포함)을 모두 지우고, 아니면 귀퉁이 색과 비슷한 픽셀을 지운다
     im=im.convert('RGBA');px=im.load();w,h=im.size
     corners=[px[0,0],px[w-1,0],px[0,h-1],px[w-1,h-1]];bg=max(set(corners),key=corners.count)
-    mag=bg[0]>170 and bg[2]>170 and bg[1]<110
+    edge=[px[x,y] for x in range(0,w,7) for y in (3,h//2,h-4)]+[px[x,y] for y in range(0,h,7) for x in (3,w-4)]
+    mag=sum(1 for r,g,b,a in edge if r>170 and b>170 and g<110)>len(edge)*.4
     for y in range(h):
         for x in range(w):
             r,g,b,a=px[x,y]

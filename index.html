@@ -807,7 +807,7 @@ function drawZLabels(){ctx.textAlign='center';for(const l of ZLABELS){ctx.font=`
 /* ───────── 그림(art/) ─────────
    tools/build-art.py가 만든 도트 그림. ART_READY에 있는 것만 불러오고(없는 파일 요청 금지), 불러오기 전·없는 것은 코드 그림으로 그린다.
    그림을 새로 받으면 build-art.py를 돌린 뒤 여기 목록에 이름을 더한다. */
-const ART_READY=['ally_gangseok','ally_jisu','ally_yuna','ally_malsun','car_sedan','car_taxi','bus_blue','car_police','truck_army','scooter','bags','bike','bin','t_asphalt','t_sidewalk','t_alley','t_grass','t_floor_wood','t_floor_tile','t_subway','t_water'];
+const ART_READY=['player','z_walker','z_runner','z_screamer','ally_gangseok','ally_jisu','ally_yuna','ally_malsun','car_sedan','car_taxi','bus_blue','car_police','truck_army','scooter','bags','bike','bin','t_asphalt','t_sidewalk','t_alley','t_grass','t_floor_wood','t_floor_tile','t_subway','t_water'];
 const ART={},PATS=new Map();
 for(const n of ART_READY){const im=new Image();im.onload=()=>{ART[n]=im};im.src='art/'+n+'.png'}
 function pat(n){const im=ART[n];if(!im)return null;const k=n+(ctx===mctx?'m':'l');let p=PATS.get(k);if(!p){p=ctx.createPattern(im,'repeat');PATS.set(k,p)}return p}
@@ -1730,7 +1730,7 @@ function zombieMarks(z,top){const x=z.x,y=z.y;top=top||52;
 }
 function drawPlayer(){
   const x=P.x,y=P.y,moving=keys.KeyW||keys.KeyA||keys.KeyS||keys.KeyD||keys.ArrowUp||keys.ArrowDown||keys.ArrowLeft||keys.ArrowRight||joy.on;
-  if(ART.player){drawSheet('player',P,moving,P.hurt>0?.6:undefined);if(P.swing>0){const fa=Math.atan2(P.fy,P.fx),w=WEAP[P.weapon.id];ctx.strokeStyle='rgba(255,255,255,.4)';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(x,y-14,w.reach,w.reach*.7,0,fa-1,fa+1);ctx.stroke()}return}
+  if(ART.player){ctx.strokeStyle='rgba(120,220,255,.55)';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(x,y+2,14,6,0,0,7);ctx.stroke();drawSheet('player',P,moving,P.hurt>0?.6:undefined);if(P.swing>0){const fa=Math.atan2(P.fy,P.fx),w=WEAP[P.weapon.id];ctx.strokeStyle='rgba(255,255,255,.4)';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(x,y-14,w.reach,w.reach*.7,0,fa-1,fa+1);ctx.stroke()}return}
   const bob=moving?Math.sin(P.ph)*2:0,up=P.fy<-.35;
   ctx.fillStyle='rgba(0,0,0,.32)';ctx.beginPath();ctx.ellipse(x,y+2,10,4,0,0,7);ctx.fill();
   ctx.fillStyle='#2c3440';ctx.fillRect(x-5,y-7+Math.max(0,bob),4,9);ctx.fillRect(x+1,y-7+Math.max(0,-bob),4,9);
