@@ -15,7 +15,7 @@ const url=process.argv[2]||'http://127.0.0.1:8795',out=process.argv[3];
     // 기본 화면·재난문자·비·노선도
     await p.waitForTimeout(900);
     const look=await p.evaluate(()=>{
-      const r={noir:VLOOK==='noir',sms:$('#sms').classList.contains('on')&&$('#sms').textContent.includes('행정안전부')};
+      const r={noir:VLOOK==='pixel',sms:$('#sms').classList.contains('on')&&$('#sms').textContent.includes('행정안전부')};
       const sr=$('#sms').getBoundingClientRect();r.smsFit=sr.left>=0&&sr.right<=innerWidth+1;
       smsNext();smsNext();smsNext();smsNext();
       Z=[];spawnZ(P.x+160,P.y);const z=Z[0];z.fx=1;z.fy=0;G.rain=true;noise(P.x,P.y,200,0);r.rainQuiet=z.state==='idle';

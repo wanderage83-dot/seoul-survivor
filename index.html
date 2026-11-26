@@ -1130,7 +1130,7 @@ function updateZ(z,dt,night){
 }
 
 /* ───────── 거점 ───────── */
-function pause(){G.state='pause';showScreen(`<div class="win big"><h1>일시정지</h1><p>${G.day}일차 · ${clockText()}</p><div class="keys">이동 WASD·방향키 · 달리기 Shift · 지도 M<br>공격 Space·클릭 · 뒤지기/거점 E<br>폭죽 F·우클릭 · 아이템 1~5</div><button class="btn pri" onclick="resume()">계속하기</button><button class="btn" onclick="toggleLook()">화면: ${VLOOK==='noir'?'무채색+네온 (바꾸기)':'기본 (바꾸기)'}</button><button class="btn" onclick="saveGame();titleScreen()">저장하고 처음 화면으로</button></div>`)}
+function pause(){G.state='pause';showScreen(`<div class="win big"><h1>일시정지</h1><p>${G.day}일차 · ${clockText()}</p><div class="keys">이동 WASD·방향키 · 달리기 Shift · 지도 M<br>공격 Space·클릭 · 뒤지기/거점 E<br>폭죽 F·우클릭 · 아이템 1~5</div><button class="btn pri" onclick="resume()">계속하기</button><button class="btn" onclick="toggleLook()">화면: ${LOOK_NAME[VLOOK]} (바꾸기)</button><button class="btn" onclick="saveGame();titleScreen()">저장하고 처음 화면으로</button></div>`)}
 function resume(){G.state='field';closeScreen();last=performance.now()}
 function openBase(){
   G.state='base';P.search=null;ALLY=null;
@@ -1353,7 +1353,24 @@ function hud(){
 $('#quick').addEventListener('pointerdown',e=>{const b=e.target.closest('button');if(!b||!G||G.state!=='field')return;e.preventDefault();quickUse(+b.dataset.q)});
 
 /* ───────── 그리기 ───────── */
-const cv=$('#cv'),ctx=cv.getContext('2d');
+const cv=$('#cv'),mctx=cv.getContext('2d');let ctx=mctx;
+/* 도트 화면: 작은 캔버스(lo)에 그리고 32색으로 맞춘 뒤 각지게 키운다. 글자는 따로 모아(TXT) 마지막에 선명하게 다시 쓴다. */
+const lo=document.createElement('canvas'),loctx=lo.getContext('2d');let RS=1,PXS=1;const TXT=[];
+loctx.fillText=function(t,x,y){const m=this.getTransform();TXT.push({t,x,y,m:{a:m.a,b:m.b,c:m.c,d:m.d,e:m.e,f:m.f},font:this.font,fill:this.fillStyle,align:this.textAlign,alpha:this.globalAlpha})};
+const PAL=['#0b0a12','#15141f','#1f1d2b','#2a2838','#373447','#46425a','#58536e','#6d6886','#88839f','#aaa6bd','#d2cfdd','#f0eef5','#1c2c42','#2c4766','#466e93','#74a0c6','#3a3020','#5c4a2e','#8a6e44','#b89a68','#1f3a2c','#33603f','#5a9a5c','#5a1418','#9a2224','#d0453a','#e45c86','#f09a3a','#f2d45c','#40c8c0','#8a5cc8','#ffffff'];
+const BAYER=[0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5].map(v=>(v/16-.47)*22);
+let PLUT=null;
+function palLUT(){if(PLUT)return PLUT;PLUT=new Uint32Array(32768);const P3=PAL.map(h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]);
+  for(let i=0;i<32768;i++){const r=(i>>10)*8+4,g=(i>>5&31)*8+4,b=(i&31)*8+4;let bd=1e9,bc=0;for(const [pr,pg,pb] of P3){const d=(r-pr)**2*.3+(g-pg)**2*.59+(b-pb)**2*.11;if(d<bd){bd=d;bc=(pr<<16)|(pg<<8)|pb}}PLUT[i]=bc}return PLUT}
+function pixelBlit(){
+  const w=lo.width,h=lo.height,im=loctx.getImageData(0,0,w,h),d=im.data,L=palLUT();
+  for(let y=0,i=0;y<h;y++)for(let x=0;x<w;x++,i+=4){const o=BAYER[(y&3)*4+(x&3)],r=clamp(d[i]+o,0,255),g=clamp(d[i+1]+o,0,255),b=clamp(d[i+2]+o,0,255);const c=L[((r>>3)<<10)|((g>>3)<<5)|(b>>3)];d[i]=c>>16;d[i+1]=c>>8&255;d[i+2]=c&255}
+  loctx.putImageData(im,0,0);
+  mctx.setTransform(1,0,0,1,0,0);mctx.imageSmoothingEnabled=false;mctx.drawImage(lo,0,0,w*PXS*DPR,h*PXS*DPR);
+  const K=PXS*DPR;
+  for(const t of TXT){mctx.setTransform(t.m.a*K,t.m.b*K,t.m.c*K,t.m.d*K,t.m.e*K,t.m.f*K);mctx.font=t.font;mctx.fillStyle=t.fill;mctx.textAlign=t.align;mctx.globalAlpha=t.alpha;mctx.fillText(t.t,t.x,t.y)}
+  mctx.globalAlpha=1;mctx.setTransform(1,0,0,1,0,0);
+}
 const dk=document.createElement('canvas'),dctx=dk.getContext('2d');
 let W,H,DPR,zoom,cam={x:0,y:0};
 function resize(){DPR=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=W*DPR;cv.height=H*DPR;dk.width=cv.width;dk.height=cv.height;zoom=clamp(Math.min(W,H)/(T*11),.8,1.7)}
@@ -1364,14 +1381,23 @@ function onScreen(x,y){const s=toScreen(x,y);return s.x>-40&&s.y>-40&&s.x<W+40&&
 const TCOL=[['#2f3236','#2c2f33','#33363a'],['#6d6961','#68645c','#726e66'],['#3e4934','#3a4430','#434e38'],['#56514b','#524d47','#5a554f'],['#5a302d','#55302c','#5e3330']];
 
 function render(){
-  ctx.setTransform(DPR,0,0,DPR,0,0);ctx.fillStyle='#0b0c0e';ctx.fillRect(0,0,W,H);
+  const PIX=VLOOK==='pixel'&&G;
+  if(PIX){PXS=Math.max(2,Math.round(T*zoom/17));const lw=Math.ceil(W/PXS),lh=Math.ceil(H/PXS);if(lo.width!==lw||lo.height!==lh){lo.width=lw;lo.height=lh}if(dk.width!==lw||dk.height!==lh){dk.width=lw;dk.height=lh}ctx=loctx;ctx.imageSmoothingEnabled=false;RS=1/PXS;TXT.length=0}
+  else{ctx=mctx;RS=DPR;if(dk.width!==cv.width||dk.height!==cv.height){dk.width=cv.width;dk.height=cv.height}}
+  render0();
+  if(PIX)pixelBlit();
+  ctx=mctx;
+}
+function render0(){
+  ctx.setTransform(RS,0,0,RS,0,0);ctx.fillStyle='#0b0c0e';ctx.fillRect(0,0,W,H);
   if(!G)return;
   cam.x=P.x;cam.y=P.y-18;
   const sx=(R()-.5)*shake,sy=(R()-.5)*shake;
-  ctx.setTransform(DPR*zoom,0,0,DPR*zoom,DPR*(W/2-cam.x*zoom+sx),DPR*(H/2-cam.y*zoom+sy));
+  ctx.setTransform(RS*zoom,0,0,RS*zoom,RS*(W/2-cam.x*zoom+sx),RS*(H/2-cam.y*zoom+sy));
   const vx0=cam.x-W/2/zoom-T,vy0=cam.y-H/2/zoom-T,vx1=cam.x+W/2/zoom+T,vy1=cam.y+H/2/zoom+120;
   const tx0=Math.max(0,vx0/T|0),ty0=Math.max(0,vy0/T|0),tx1=Math.min(MW-1,vx1/T|0),ty1=Math.min(MH-1,vy1/T|0);
   drawGround(tx0,ty0,tx1,ty1);
+  SHAFTS=[];if(G.area)drawShafts(tx0,tx1);
   for(const d of decals){if(d.x<vx0||d.x>vx1||d.y<vy0||d.y>vy1)continue;ctx.fillStyle='rgba(70,12,10,.5)';ctx.beginPath();ctx.ellipse(d.x,d.y,d.r,d.r*.6,d.a,0,7);ctx.fill()}
   // 거점 표시
   const hx=(HOME_TILE.x+.5)*T,hy=(HOME_TILE.y+.5)*T,pulse=.5+.5*Math.sin(performance.now()/400);
@@ -1393,7 +1419,7 @@ function render(){
   for(const n of NPCS)objs.push([n.y,8,n]);
   for(const f of thrown)objs.push([f.y,5,f]);
   objs.sort((a,b)=>a[0]-b[0]);
-  const NO=VLOOK==='noir',late=[];
+  const NO=VLOOK!=='basic',late=[];
   for(const it of objs){if(NO&&it[1]>=3&&it[1]!==6){late.push(it);continue}drawObj(it[1],it[2])}
   if(NO)noirPass(vx0,vy0,vx1,vy1,late);
   // 효과
@@ -1404,11 +1430,11 @@ function render(){
   }
   if(P.search){const k=P.search.t/searchTime();ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillRect(P.x-20,P.y-46,40,6);ctx.fillStyle='#e6b94c';ctx.fillRect(P.x-20,P.y-46,40*k,6)}
   // 밤
-  ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.setTransform(RS,0,0,RS,0,0);
   const nk=Math.max(clamp((G.t-NIGHT+25)/30,0,1),(G.area||ZONES[G.zone].dark)?.62:0),dusk=(G.area||ZONES[G.zone].dark)?0:1*clamp((G.t-NIGHT+50)/30,0,1)*(1-nk);
   if(dusk>0){ctx.fillStyle=`rgba(190,90,40,${.18*dusk})`;ctx.fillRect(0,0,W,H)}
   if(nk>0){
-    dctx.setTransform(DPR,0,0,DPR,0,0);dctx.globalCompositeOperation='source-over';dctx.clearRect(0,0,W,H);
+    dctx.setTransform(RS,0,0,RS,0,0);dctx.globalCompositeOperation='source-over';dctx.clearRect(0,0,W,H);
     dctx.fillStyle=`rgba(4,6,16,${.86*nk})`;dctx.fillRect(0,0,W,H);
     dctx.globalCompositeOperation='destination-out';
     const p=toScreen(P.x,P.y-10);
@@ -1417,10 +1443,11 @@ function render(){
     g=dctx.createRadialGradient(p.x,p.y,20,p.x,p.y,L);g.addColorStop(0,'rgba(0,0,0,.95)');g.addColorStop(1,'rgba(0,0,0,0)');dctx.fillStyle=g;
     dctx.beginPath();dctx.moveTo(p.x,p.y);dctx.arc(p.x,p.y,L,fa-.45,fa+.45);dctx.closePath();dctx.fill();
     for(const f of thrown)if(f.st==='burn'){const q=toScreen(f.x,f.y);g=dctx.createRadialGradient(q.x,q.y,5,q.x,q.y,80*zoom);g.addColorStop(0,'rgba(0,0,0,.9)');g.addColorStop(1,'rgba(0,0,0,0)');dctx.fillStyle=g;dctx.beginPath();dctx.arc(q.x,q.y,80*zoom,0,7);dctx.fill()}
-    if(VLOOK==='noir')noirNightCut();
+    if(VLOOK!=='basic')noirNightCut();
+    for(const sh of SHAFTS){dctx.fillStyle='rgba(0,0,0,.32)';dctx.beginPath();sh.forEach(([x,y],i)=>{const q=toScreen(x,y);i?dctx.lineTo(q.x,q.y):dctx.moveTo(q.x,q.y)});dctx.fill()}
     if(!G.area&&G.zone==='gangnam'){const q=toScreen(hx,hy);g=dctx.createRadialGradient(q.x,q.y,5,q.x,q.y,70*zoom);g.addColorStop(0,'rgba(0,0,0,.8)');g.addColorStop(1,'rgba(0,0,0,0)');dctx.fillStyle=g;dctx.beginPath();dctx.arc(q.x,q.y,70*zoom,0,7);dctx.fill()}
-    ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(dk,0,0);ctx.setTransform(DPR,0,0,DPR,0,0);
-    if(VLOOK==='noir')noirNightGlow(nk);
+    ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(dk,0,0);ctx.setTransform(RS,0,0,RS,0,0);
+    if(VLOOK!=='basic')noirNightGlow(nk);
   }
   drawRain();
   if(P.hurt>0||P.hp<30){const a=P.hurt>0?P.hurt*1.2:.15+.1*Math.sin(performance.now()/300);const g=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*.3,W/2,H/2,Math.max(W,H)*.7);g.addColorStop(0,'rgba(150,0,0,0)');g.addColorStop(1,`rgba(150,0,0,${a})`);ctx.fillStyle=g;ctx.fillRect(0,0,W,H)}
@@ -1437,19 +1464,31 @@ function render(){
   }
   drawFinalBar();
 }
+let SHAFTS=[];
+function drawShafts(tx0,tx1){
+  const y=IN_OY,Y=y*T;
+  for(let x=Math.max(0,tx0);x<=Math.min(MW-1,tx1);x++){
+    if(x%6!==1||tile[y*MW+x]!==6||tile[(y+1)*MW+x]!==5)continue;const X=x*T;
+    ctx.fillStyle='#2a3550';ctx.fillRect(X+5,Y+T-15,22,11);ctx.fillStyle='#8fb0d8';ctx.fillRect(X+7,Y+T-13,8,7);ctx.fillRect(X+17,Y+T-13,8,7);
+    const pts=[[X+7,Y+T],[X+25,Y+T],[X+25+80,Y+T+190],[X+7+80,Y+T+190]];SHAFTS.push(pts);
+    const g=ctx.createLinearGradient(X,Y+T,X+80,Y+T+190);g.addColorStop(0,'rgba(170,200,255,.16)');g.addColorStop(1,'rgba(170,200,255,0)');
+    ctx.globalCompositeOperation='lighter';ctx.fillStyle=g;ctx.beginPath();pts.forEach(([a,b],i)=>i?ctx.lineTo(a,b):ctx.moveTo(a,b));ctx.fill();ctx.globalCompositeOperation='source-over';
+  }
+}
 function drawObj(k,o){if(k===0)drawBuilding(o);else if(k===1)drawCar(o);else if(k===2)drawTree(o);else if(k===3)drawZombie(o);else if(k===4)drawPlayer();else if(k===6)drawExit(o);else if(k===7)drawPerson(o,SURV[o.id].col,SURV[o.id].n,o.hp,SURV[o.id].hp);else if(k===8)drawNpc(o);else drawFire(o)}
 /* ───────── 화면 분위기: 무채색 + 네온 (?look=noir, &rain=1) ─────────
    1차로 땅·건물·차·나무를 그린 뒤 화면 전체 채도를 빼고, 2차로 간판·피·아이템 반짝임·사람/좀비만 원래 색으로 다시 그린다.
    밤에는 살아 있는 간판이 어둠을 뚫고 빛나며 바닥에 번진다(NEON). 일부 간판은 꺼져 있거나 깜박인다. */
 const QS=new URLSearchParams(location.search);
-let VLOOK=QS.get('look')||(()=>{try{return localStorage.getItem('seoul-survivor-look')}catch(e){return null}})()||'noir',RAIN=QS.get('rain')==='1',NEON=[];
-function toggleLook(){VLOOK=VLOOK==='noir'?'basic':'noir';try{localStorage.setItem('seoul-survivor-look',VLOOK)}catch(e){}pause()}
+let VLOOK=QS.get('look')||(()=>{try{return localStorage.getItem('seoul-survivor-look2')}catch(e){return null}})()||'pixel',RAIN=QS.get('rain')==='1',NEON=[];
+const LOOK_NAME={pixel:'도트',noir:'무채색+네온',basic:'기본'};
+function toggleLook(){VLOOK=VLOOK==='pixel'?'noir':VLOOK==='noir'?'basic':'pixel';try{localStorage.setItem('seoul-survivor-look2',VLOOK)}catch(e){}pause()}
 const raining=()=>RAIN||!!(G&&G.rain&&!G.area&&!ZONES[G.zone].dark);
 const rgba=(hex,a)=>{const n=parseInt(hex.slice(1),16);return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`};
 function noirPass(vx0,vy0,vx1,vy1,late){
   ctx.save();ctx.setTransform(1,0,0,1,0,0);
-  ctx.globalCompositeOperation='saturation';ctx.fillStyle='rgba(128,128,128,.85)';ctx.fillRect(0,0,cv.width,cv.height);
-  ctx.globalCompositeOperation='multiply';ctx.fillStyle='rgba(196,190,178,.45)';ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.globalCompositeOperation='saturation';ctx.fillStyle='rgba(128,128,128,.85)';ctx.fillRect(0,0,ctx.canvas.width,ctx.canvas.height);
+  ctx.globalCompositeOperation='multiply';ctx.fillStyle=VLOOK==='pixel'?'rgba(170,160,205,.55)':'rgba(196,190,178,.45)';ctx.fillRect(0,0,ctx.canvas.width,ctx.canvas.height);
   ctx.restore();ctx.globalCompositeOperation='source-over';
   for(const d of decals){if(d.x<vx0||d.x>vx1||d.y<vy0||d.y>vy1)continue;ctx.fillStyle='rgba(110,8,6,.55)';ctx.beginPath();ctx.ellipse(d.x,d.y,d.r,d.r*.6,d.a,0,7);ctx.fill()}
   NEON=[];const nk=clamp((G.t-NIGHT+25)/30,0,1),now=performance.now();
@@ -1472,7 +1511,7 @@ function noirNightCut(g){
 function noirNightGlow(nk){
   ctx.globalCompositeOperation='lighter';
   for(const n of NEON){const q=toScreen(n.x,n.y),r=Math.max(80,n.w*.8)*zoom;
-    let gr=ctx.createRadialGradient(q.x,q.y,2,q.x,q.y,r);gr.addColorStop(0,rgba(n.c,.32*nk));gr.addColorStop(1,rgba(n.c,0));ctx.fillStyle=gr;ctx.beginPath();ctx.arc(q.x,q.y,r,0,7);ctx.fill();
+    let gr=ctx.createRadialGradient(q.x,q.y,2,q.x,q.y,r);gr.addColorStop(0,rgba(n.c,(VLOOK==='pixel'?.2:.32)*nk));gr.addColorStop(1,rgba(n.c,0));ctx.fillStyle=gr;ctx.beginPath();ctx.arc(q.x,q.y,r,0,7);ctx.fill();
     const ry=q.y+46*zoom,rw=n.w*.5*zoom;gr=ctx.createRadialGradient(q.x,ry,2,q.x,ry,rw);gr.addColorStop(0,rgba(n.c,(raining()?.34:.16)*nk));gr.addColorStop(1,rgba(n.c,0));ctx.fillStyle=gr;ctx.save();ctx.translate(q.x,ry);ctx.scale(1,.35);ctx.translate(-q.x,-ry);ctx.beginPath();ctx.arc(q.x,ry,rw,0,7);ctx.fill();ctx.restore();
   }
   ctx.globalCompositeOperation='source-over';
@@ -1522,6 +1561,7 @@ function drawBuilding(b){
   const x=b.x*T,y=b.y*T,w=b.w*T,h=b.h*T,ov=b.kind==='tower'?48:0,Hh=Math.round(Math.min(b.H,h*.65+ov)),fy=y+h-Hh,ry=y-ov,rh=h+ov-Hh,gf=36,hv0=hash(b.x,b.y);
   ctx.globalAlpha=ov&&behind(x,ry,x+w,y+rh)?.4:1;
   ctx.fillStyle='rgba(0,0,0,.25)';ctx.fillRect(x+6,y+h-4,w,8);
+  ctx.fillStyle='rgba(0,0,0,.2)';ctx.beginPath();ctx.moveTo(x+w,ry+6);ctx.lineTo(x+w+20,ry+18);ctx.lineTo(x+w+20,y+h+4);ctx.lineTo(x+w,y+h);ctx.fill();
   // 앞면
   if(b.kind==='tower'){
     const g=ctx.createLinearGradient(0,fy,0,y+h);g.addColorStop(0,'#5d7f99');g.addColorStop(1,'#2c3f50');ctx.fillStyle=g;ctx.fillRect(x,fy,w,Hh);
