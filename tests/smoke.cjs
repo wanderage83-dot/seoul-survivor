@@ -25,14 +25,14 @@ const url=process.argv[2]||'http://127.0.0.1:8795',out=process.argv[3];
     ok(Object.values(look).every(Boolean),`${vp.w}: 무채색 기본·재난문자·비·노선도 ${JSON.stringify(look)}`);
     // 가방 무게·장비·손전등
     const inv=await p.evaluate(()=>{
-      const r={};P.bag={};r.cap=capKg()===15;P.bag.scrap=15;r.full=!canCarry('scrap');
-      P.bag={backpack:1};openInv();r.win=G.state==='inv';invEquip('backpack');r.bigger=capKg()===25&&!P.bag.backpack;
+      const r={};P.bag={};P.lay=[];r.cap=gridWH().join()==='6,4';P.bag.scrap=36;r.full=!canCarry('scrap')&&freeCells()===0;P.bag={axe:1,pipe:2,can:9,water:3,scrap:3,cloth:4};P.lay=[];r.sort=sortInv('type')&&P.lay[0].id==='pipe'||P.lay[0].id==='axe';r.pack=sortInv('size')&&overflow().length===0;
+      P.bag={backpack:1};openInv();r.win=G.state==='inv';invEquip('backpack');r.bigger=gridWH().join()==='8,5'&&!P.bag.backpack;
       P.bag={vest:1};invEquip('vest');r.vest=P.eq.body==='vest'&&gearDef()>=.25;
       Z=[];spawnZ(P.x+15,P.y);const h=P.hp;hurtPlayer(Z[0]);r.def=h-P.hp<ZT.walker.dmg;Z=[];
       P.bat=50;P.lightOn=true;r.lit=lightActive();P.bag={battery:1};invUse('battery');r.bat=P.bat===100&&!P.bag.battery;
       closeInv();r.back=G.state==='field';P.eq.body=null;P.eq.pack=null;P.bag={};P.lightOn=false;
       return r});
-    ok(Object.values(inv).every(Boolean),`${vp.w}: 가방 무게·장비·손전등 ${JSON.stringify(inv)}`);
+    ok(Object.values(inv).every(Boolean),`${vp.w}: 가방 칸·정렬·정리·장비·손전등 ${JSON.stringify(inv)}`);
     // 지도 연결성: 거점에서 모든 뒤질 것까지 갈 수 있다
     ok(await p.evaluate(()=>{const D=bfs((HOME_TILE.x+.5)*T,(HOME_TILE.y+.5)*T);return conts.every(c=>{const tx=c.x/T|0,ty=c.y/T|0;if(c.car){for(const [i,j] of [[-1,0],[1,0],[0,-1],[0,1],[2,0],[0,2],[-1,1],[1,-1]])if(D[(c.car.y+j)*MW+c.car.x+i]>=0)return true;return false}return D[ty*MW+tx]>=0})}),`${vp.w}: 모든 뒤질 것에 갈 수 있다`);
     // 걷기
