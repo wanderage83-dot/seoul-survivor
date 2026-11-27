@@ -164,7 +164,7 @@ const url=process.argv[2]||'http://127.0.0.1:8795',out=process.argv[3];
       spawnZ(P.x+20,P.y,'dog');const dg=Z[0];P.inf=0;for(let i=0;i<30;i++)hurtPlayer(dg);r.dogNoInf=P.inf===0;P.hp=100;
       dg.hp=0;killZ(dg);r.dogDrop=P.bag.dog===1;Z=[];
       const d0=G.day;G.day=3;spawnDogs();G.day=d0;r.packs=Z.filter(z=>z.type==='dog').length>=3;Z=[];
-      const car=conts.find(c=>c.car&&!c.car.bus&&!c.car.train&&!c.car.mil);car.empty=true;P.bag={};P.x=car.x;P.y=car.y+30;
+      let car=null;for(const c of conts){if(!c.car||c.car.bus||c.car.train||c.car.mil||c.car.doorless)continue;let ok=0;for(const [ox,oy] of [[0,30],[0,-30],[30,0],[-30,0],[0,36],[36,0]]){if(hitsSolid(c.x+ox,c.y+oy,P.r))continue;P.x=c.x+ox;P.y=c.y+oy;if(nearCont()===c){ok=1;break}}if(ok){car=c;break}}car.empty=true;P.bag={};
       const was=P.search;interact();r.doorStart=!!(P.search&&P.search.door);if(P.search){P.search.t=9;update(.016)}r.door=P.bag.cardoor===1&&car.car.doorless===1;
       P.bag=keep;return r});
     ok(Object.values(trp).every(Boolean),`${vp.w}: 판자 막이·경보줄·깨진 병·쥐덫·들개·문짝 ${JSON.stringify(trp)}`);
