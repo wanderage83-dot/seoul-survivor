@@ -2,7 +2,7 @@
 const {chromium}=require('playwright');
 const url=process.argv[2]||'http://127.0.0.1:8795',out=process.argv[3];
 (async()=>{
-  const b=await chromium.launch();let fail=0;
+  const b=await chromium.launch({args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});let fail=0;
   const ok=(c,m)=>{console.log((c?'✓ ':'✗ ')+m);if(!c)fail++};
   for(const vp of [{w:390,h:844,touch:true},{w:1280,h:720},{w:844,h:390,touch:true}]){
     const ctx=await b.newContext({viewport:{width:vp.w,height:vp.h},hasTouch:!!vp.touch,isMobile:!!vp.touch});
@@ -169,6 +169,15 @@ const url=process.argv[2]||'http://127.0.0.1:8795',out=process.argv[3];
       P.bag=keep;return r});
     ok(Object.values(trp).every(Boolean),`${vp.w}: 판자 막이·경보줄·깨진 병·쥐덫·들개·문짝 ${JSON.stringify(trp)}`);
     await p.evaluate(()=>{Z=[];P.search=null;P.x=(HOME_TILE.x+.5)*T;P.y=(HOME_TILE.y+.8)*T});
+    // 3D 보기(시험): three.js를 로컬 사본으로 받아 켜고, 그리기·누르기·건물 안이 오류 없이 도는지
+    const three=require('path').join(__dirname,'three.min.js');
+    if(require('fs').existsSync(three)){
+      await p.route('**/three.min.js',r=>r.fulfill({path:three,contentType:'application/javascript'}));
+      await p.evaluate(()=>set3D(true));await p.waitForFunction(()=>V3.ready,null,{timeout:15000}).catch(()=>{});await p.waitForTimeout(600);
+      const v3=await p.evaluate(()=>{const r={ready:V3.ready&&v3on(),meshes:V3.bmeshes&&V3.bmeshes.length>20};const a=toScreen(P.x,P.y),w=toWorld(a.x,a.y);r.proj=hyp(w.x-P.x,w.y-P.y)<8;return r});
+      await p.evaluate(()=>set3D(false));await p.waitForTimeout(200);v3.off=await p.evaluate(()=>!v3on()&&$('#cv3').style.display==='none');
+      ok(Object.values(v3).every(Boolean),`${vp.w}: 3D 보기 켜고 끄기 ${JSON.stringify(v3)}`);
+    }
     // 지도 연결성: 거점에서 모든 뒤질 것까지 갈 수 있다
     ok(await p.evaluate(()=>{const D=bfs((HOME_TILE.x+.5)*T,(HOME_TILE.y+.5)*T);return conts.every(c=>{const tx=c.x/T|0,ty=c.y/T|0;if(c.car){for(const [i,j] of [[-1,0],[1,0],[0,-1],[0,1],[2,0],[0,2],[-1,1],[1,-1]])if(D[(c.car.y+j)*MW+c.car.x+i]>=0)return true;return false}return D[ty*MW+tx]>=0})}),`${vp.w}: 모든 뒤질 것에 갈 수 있다`);
     // 걷기

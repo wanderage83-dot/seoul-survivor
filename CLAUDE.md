@@ -2,6 +2,7 @@
 
 서울을 무대로 한 쿼터뷰 좀비 생존 게임. **정적 HTML 단일 파일**(`index.html`)이며 빌드 도구·npm 의존성을 넣지 않는다.
 
+- **예외(사용자 동의 2026-11-27):** 3D 보기에 한해 three.js r160을 CDN(`V3_URL`, jsDelivr `three.min.js`)에서 불러온다. npm 설치·빌드는 여전히 없다. 이 환경에서는 CDN이 막혀 있어 `tests/three.min.js`(같은 판, npm에서 받은 사본)를 smoke 테스트가 가로채 넣는다.
 - 실제 지명·길 배치는 참고하되 상호는 비튼 이름(스타벅수, 다있소 등)으로 쓴다. 실제 상호·로고를 그대로 쓰지 않는다.
 - 기획 원본: `notes/2026-11-25_서울좀비생존_기획안.md`. 장르(탐색·제작·거점 생존)만 참고하는 원작이다. 다른 게임의 이름·인물·그림·맵을 가져오지 않는다.
 - 게임 내 문구는 한국어로 쓴다. 기능을 바꾸면 `README.md`도 고친다.
@@ -26,6 +27,7 @@
 | 방어·들개·기분 | `FACS.barr.lv`(5단계 이름·재료, `facNeed`가 lv 우선), `smoke`/`ratfarm` 시설(sleep에서), 설치물 `TRAPS`({k,key=goKey()})·`placeTrap`(invUse의 「놓기」)·`trapTick`·`trapsLeave`(층·구역 떠날 때 판자 solid 되돌림)·`nearTrap`/`checkTrap`·`drawTraps`, z.slowT(깨진 병). 들개 `ZT.dog`·`spawnDogs`(2일차~, 감염 없음, killZ에서 「들개」), 낚시·문짝은 `P.search={fish|door,dur}`(finishSearch 분기), `nearWater`. 동료 기분 `G.mood`·`moodOf`·`DOG_TALK`·`crewReact`(craft에서), 30 미만이면 아침 도움 쉼 |
 | 목표 표시 | `ZORD`, `goalTarget()`(goalSteps의 다음 단계 → 이 구역에서 그쪽으로 가는 link, 남산이면 final, 건물 안 null), `drawGoalMark`(월드), `edgeArrow`(화면 가장자리, 거점 화살표와 같은 모양), drawMini·openMap에 🎯·소굴(`NEST` 캐시)·경보줄·쥐덫. 휴대폰 세로(<600px)는 `#hotbar`가 왼쪽 아래 고정 4열 |
 | 던지는 무기 | `WEAP.spear`(각목창), `ITEMS.molotov/bomb`(thr:1), `THROWS`·`throwKind`(P.throwSel → 남은 것), `throwFire`가 thrown에 kind, update의 thrown 분기(molotov: burn 4.5초·.25초마다 `areaHurt`+z.burnT, bomb: fuse 1.5초 → 반경 100 폭발·플레이어 피해·fx 'boom'), `areaHurt`, 좀비 burnT(update에서 초당 9), `drawFire`, hud가 #bThrow 그림·이름 갱신 |
+| 3D 보기 | `V3`(want/ready/key/bmeshes/sprites), `load3D`/`init3D`/`set3D`/`resize3D`, `build3D`(구역·층 바뀌면: 건물 상자(v3box UV 반복 창문)·간판 v3sign·옥상 소품·차·나무·출구·벽 칸 InstancedMesh), `render3D`(카메라 남쪽 위 pit .95·거리는 화면비로, 해/반구/손전등 SpotLight/불 PointLight, 바닥은 2D drawGround 등을 `V3.gcv`에 그려 텍스처, 앞 건물 반투명, 사람·좀비는 drawObj를 64×88 캔버스에 그려 Sprite, 위에 2D로 fx·화살표), `v3proj`/`v3world`(toScreen·toWorld가 3D면 이걸 씀), pickTarget은 3D면 화면 거리로 좀비 고름. render()가 v3on()이면 render3D |
 | 엔딩 | `finalNeed`/`finalAsk`/`finalStart`/`finalTick`(90초 송신, 6칸 안에 있어야 진행)/`drawFinal`/`drawFinalBar`/`winFinal` |
 | 저장 | `SAVE_KEY='seoul-survivor-save-v1'`(키는 그대로, 내용 v2), `saveGame`/`loadGame`/`readSave`/`clearSave`. 지도는 seed로 재생성, 상자는 구역별 `zones[id]`의 conts 순서 인덱스로 복원(v1은 강남 하나로 읽음), 층 상자는 `G.floorSave`→`fillFloor`. 저장 구조를 바꾸면 v를 올리거나 loadGame에서 기본값을 채운다 |
 | 화면 분위기 | 기본 `VLOOK='pixel'`(도트: `render`가 `lo` 작은 캔버스에 `render0`을 그리고 `pixelBlit`이 `PAL` 32색+`BAYER` 디더링 후 각지게 확대, 글자는 `loctx.fillText`가 `TXT`에 모아 선명하게 다시 씀. 화면 크기 변환은 `RS`, 한 칸 픽셀 `PXS`). 그 밖에 'noir'·'basic'(주소 `?look=`·일시정지 `toggleLook`, localStorage `seoul-survivor-look2`). `drawShafts`/`SHAFTS` 실내 창문 빛줄기. `noirPass`(1차 그림 후 채도 빼기 — 도트는 낮 .18·밤/실내 .78로 시간에 따라 → 간판·피·반짝임·사람/좀비만 색으로 다시), `NEON`·`noirNightCut`·`noirNightGlow`(밤 간판 빛), `drawRain`. 날씨: `G.rain`(잠잘 때 30%), `raining()`(바깥에서만): 소리×.7·좀비 시야×.85·갈증×.5·빗물 받이×2. 주소 `&rain=1`은 강제 비 |
