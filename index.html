@@ -93,6 +93,17 @@ body.touch #btns{display:grid;position:fixed;right:14px;bottom:calc(18px + env(s
 .wrow{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;font-size:12px;color:var(--dim)}.wrow b{color:var(--ink)}
 .desc{font-size:12px;line-height:1.5;color:#cfcac0;margin:0}.acts{display:flex;gap:6px;flex-wrap:wrap}.acts button{border:1px solid var(--line);background:rgba(255,255,255,.08);border-radius:8px;padding:6px 10px;font-size:12px}
 .btn.x{flex:0 0 auto;padding:4px 10px}
+.goalbox{border:1px solid rgba(230,185,76,.5);background:rgba(230,185,76,.08);border-radius:10px;padding:10px;margin:10px 0;display:flex;flex-direction:column;gap:3px}
+.goalbox small{color:var(--accent);font-size:11px}.goalbox b{font-size:15px}.goalbox span{font-size:12px;color:var(--dim)}
+.steps{display:flex;flex-direction:column;gap:6px;text-align:left}.steps div{display:grid;grid-template-columns:24px 1fr;column-gap:8px;align-items:center;background:rgba(255,255,255,.04);border-radius:8px;padding:6px 8px}
+.steps i{grid-row:span 2;font-style:normal;width:22px;height:22px;border-radius:50%;background:#7a5a1c;color:#fff3d4;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px}.steps b{font-size:13px}.steps span{font-size:11px;color:var(--dim)}
+.help h2{margin:6px 0 8px;font-size:20px}.help .hb{text-align:left;color:var(--ink);font-size:13px;line-height:1.7;min-height:120px}
+.dots{display:flex;gap:6px;justify-content:center;margin:6px 0 10px}.dots i{width:8px;height:8px;border-radius:50%;background:#444;cursor:pointer}.dots i.on{background:var(--accent)}
+#goal{pointer-events:auto;align-self:flex-start;max-width:min(330px,92vw);background:rgba(8,8,12,.84);border:1px solid var(--line);border-radius:9px;padding:5px 9px;font-size:11px;line-height:1.55;cursor:pointer}
+#goal .gh{font-weight:700;color:var(--accent);font-size:12px}#goal .gh small{color:var(--dim);font-weight:400}
+#goal .done{color:#7d9a74;text-decoration:line-through}#goal .cur{color:#fff}#goal div:not(.gh):not(.cur):not(.done){color:var(--dim)}#goal .td{color:#ffd79a;margin-top:2px}#goal .sv{color:#9fd7ff}
+@media (max-height:500px){#goal{font-size:10px;max-width:300px}
+ .win.big .steps{flex-direction:row}.win.big .steps div{flex:1}.win.big .goalbox{margin:6px 0}.win.big h1{margin:0;font-size:26px}.win.big>p.sub{display:none}.win.big .steps span{display:none}.win.big .warnp{margin:4px 0}.help .hb{min-height:0}}
 .ln{display:flex;justify-content:space-between;position:relative;padding:10px 14px 2px}
 .ln:before{content:'';position:absolute;left:44px;right:44px;top:17px;height:4px;background:#d8691c;border-radius:2px}
 .ln .st{position:relative;text-align:center;font-size:11px;width:68px;color:#888}
@@ -135,6 +146,7 @@ body:not(.ingame) #hud,body:not(.ingame) #btns,body:not(.ingame) #joyzone,body:n
     <div id="info"><div id="clock"></div><div id="bagn"></div><canvas id="mini" title="전체 지도"></canvas><div class="ib"><button id="mapbtn">🗺 지도</button><button id="pausebtn">Ⅱ</button></div></div>
   </div>
   <div id="hotbar"></div>
+  <div id="goal"></div>
 </div>
 <div id="toasts"></div>
 <div id="sms"></div>
@@ -1058,7 +1070,8 @@ function newGame(){
   spawnDay();
   closeScreen();document.body.classList.add('ingame');G.rain=false;
   toast('1일차 아침. 해가 지기 전에 청운 오피스텔로 돌아오자. [M] 지도','gold');
-  SMSQ.length=0;setTimeout(()=>{if(G&&G.day===1&&G.t<5)morningSms()},600);
+  SMSQ.length=0;let seenHelp=false;try{seenHelp=!!localStorage.getItem('seoul-survivor-help')}catch(e){}
+  if(seenHelp)setTimeout(()=>{if(G&&G.day===1&&G.t<5)morningSms()},600);else setTimeout(()=>{if(G&&G.state==='field'&&G.day===1){openHelp(false);HELPSMS=true}},50);
 }
 function spawnDay(){
   Z=[];
@@ -1178,6 +1191,7 @@ document.getElementById('cv').addEventListener('contextmenu',e=>e.preventDefault
 $('#pausebtn').addEventListener('click',()=>{if(G&&G.state==='field')pause()});
 $('#mapbtn').addEventListener('click',()=>openMap());
 $('#mini').addEventListener('click',()=>openMap());
+$('#goal').addEventListener('click',()=>{GOALOPEN=!GOALOPEN;try{localStorage.setItem('seoul-survivor-goal',GOALOPEN?'1':'0')}catch(e){}if(G)goalHud()});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&G){saveGame();if(G.state==='field')pause()}});
 if(matchMedia('(pointer:coarse)').matches)document.body.classList.add('touch');
 
@@ -1373,7 +1387,7 @@ function updateZ(z,dt,night){
 }
 
 /* ───────── 거점 ───────── */
-function pause(){G.state='pause';showScreen(`<div class="win big"><h1>일시정지</h1><p>${G.day}일차 · ${clockText()}</p><div class="keys">이동 WASD·방향키 · 달리기 Shift · 지도 M<br>공격 Space·클릭 · 뒤지기/거점 E<br>폭죽 F·우클릭 · 아이템 1~5</div><button class="btn pri" onclick="resume()">계속하기</button><button class="btn" onclick="toggleLook()">화면: ${LOOK_NAME[VLOOK]} (바꾸기)</button><button class="btn" onclick="saveGame();titleScreen()">저장하고 처음 화면으로</button></div>`)}
+function pause(){G.state='pause';showScreen(`<div class="win big"><h1>일시정지</h1><p>${G.day}일차 · ${clockText()}</p><div class="keys">이동 WASD·방향키 · 달리기 Shift · 지도 M<br>공격 Space·클릭 · 뒤지기/거점 E<br>폭죽 F·우클릭 · 아이템 1~5</div><button class="btn pri" onclick="resume()">계속하기</button><button class="btn" onclick="openHelp(false)">게임 방법</button><button class="btn" onclick="toggleLook()">화면: ${LOOK_NAME[VLOOK]} (바꾸기)</button><button class="btn" onclick="saveGame();titleScreen()">저장하고 처음 화면으로</button></div>`)}
 function resume(){G.state='field';closeScreen();last=performance.now()}
 function openBase(){
   G.state='base';P.search=null;ALLY=null;
@@ -1534,10 +1548,33 @@ function showScreen(h){const s=$('#screen');s.innerHTML=h;s.classList.add('on')}
 function closeScreen(){$('#screen').classList.remove('on')}
 function titleScreen(){
   const sv=readSave();G=null;document.body.classList.remove('ingame');$('#modal').classList.remove('on');
-  showScreen(`<div class="win big"><h1>서울, 잔류자</h1><p>감염 40일째. 봉쇄된 서울 강남역.<br>먹자골목 안쪽 오피스텔 옥상에 거점을 차렸다.<br><b style="color:var(--accent)">남산 송신소에서 구조 신호를 보내자.</b></p>
-  <div class="keys">• 낮에 강남역~신논현역 거리를 뒤져 식량·물·재료를 모은다<br>• 모든 행동은 <b>소리</b>를 낸다. 뛰거나 싸우면 좀비가 몰려온다<br>• <b style="color:#c9a6ff">비명꾼</b>을 먼저 잡아라 · 깜박이는 차는 경보가 울린다<br>• 밤이 되기 전 오피스텔 앞으로 돌아와 [뒤지기/E]로 들어간다<br>• 길: 강남역 지하(지하철 출구) → 북쪽 선로 → 한남대교 → 남산</div>
-  ${sv?`<button class="btn pri" onclick="loadGame()">이어하기 · ${sv.G.day}일차 ${svTime(sv)}</button><button class="btn" onclick="if(confirm('저장된 기록이 지워집니다. 새로 시작할까요?')){clearSave();newGame()}">새로 시작</button>`:`<button class="btn pri" onclick="newGame()">시작하기</button>`}</div>`);
+  showScreen(`<div class="win big"><h1>서울, 잔류자</h1><p class="sub">감염 40일째. 봉쇄된 서울 강남역.</p>
+  <div class="goalbox"><small>최종 목표</small><b>남산 송신소에서 구조 신호를 보내 서울을 탈출한다</b><span>강남역 → 지하·선로 → 한남대교 → 남산</span></div>
+  <div class="steps"><div><i>1</i><b>낮: 뒤진다</b><span>거리·건물에서 먹을 것, 물, 재료, 송신기 부품</span></div><div><i>2</i><b>저녁: 돌아온다</b><span>해 지기 전 거점(★ 청운 오피스텔)으로</span></div><div><i>3</i><b>밤: 잔다</b><span>먹고 마시고, 제작·시설을 키우고, 다음 날로</span></div></div>
+  <p class="warnp" style="font-size:12px">체력이 0이 되거나 감염이 100이 되면 끝. 모든 소리는 좀비를 부른다.</p>
+  ${sv?`<button class="btn pri" onclick="loadGame()">이어하기 · ${sv.G.day}일차 ${svTime(sv)}</button><button class="btn" onclick="if(confirm('저장된 기록이 지워집니다. 새로 시작할까요?')){clearSave();newGame()}">새로 시작</button>`:`<button class="btn pri" onclick="newGame()">시작하기</button>`}
+  <button class="btn" onclick="openHelp(true)">게임 방법</button></div>`);
 }
+/* 게임 방법: 처음 시작할 때 한 번, 처음 화면·일시정지에서 다시 */
+const HELP=[
+ ['🎯 목표','남산 송신소에서 <b>구조 신호</b>를 보내면 끝난다.<br>강남역 지하철 출구(▼)로 내려가 북쪽 선로를 따라 <b>한남대교</b>를 건너고, <b>남산</b> 정상 송신소에서 부품 5·테이프 2로 송신기를 고친 뒤 90초 버틴다.<br>화면 왼쪽 <b>목표</b> 칸이 지금 할 일을 알려 준다.'],
+ ['☀ 하루','하루는 06시에 시작해 <b>17시쯤 해가 진다</b>. 밤엔 좀비가 늘고 손전등 없이는 앞이 안 보인다.<br>해 지기 전 <b>★ 거점(청운 오피스텔)</b> 앞에서 [E/✋]로 들어가 잠을 잔다. 잠들 때 배고픔·갈증이 25씩 준다.'],
+ ['❤ 살아남기','<b>체력</b> 0 또는 <b>감염</b> 100이면 끝. 물리면 감염이 오르고 항생제로 낮춘다.<br>배고픔·갈증이 0이면 체력이 깎인다. 아이템 줄 1~5로 바로 먹고 마시고 치료한다.'],
+ ['🔊 소리와 좀비','걷기·달리기·공격·뒤지기 모두 <b>소리</b>를 낸다. 소리를 들은 좀비가 확인하러 온다.<br>눈치채지 못한 좀비를 치면 기습 피해. <b>비명꾼</b>은 다른 좀비를 부르니 먼저 잡자. 깜박이는 차 트렁크는 경보가 울린다. 폭죽(5)을 던져 좀비를 끌어낼 수 있다.'],
+ ['🎒 뒤지기와 가방','상자·가게·차 트렁크 앞에서 [E/✋] → 전리품 창에서 줍는다.<br>가방은 <b>칸</b>으로 찬다. 끌어서 옮기고, 「정렬」·「정리」로 빈칸을 만든다. 무기·헬멧·조끼·배낭·손전등은 장비 칸에 끼운다.'],
+ ['🏠 거점과 동료','거점에서 창고 정리, <b>제작</b>(붕대·폭죽·무기), <b>시설</b>(빗물 받이·텃밭·바리케이드). 3일마다 밤 습격이 온다.<br>생존자 5명이 건물 위층에 숨어 있다. 재난문자·동료 탭의 신호를 따라가 데려오면 매일 돕는다.'],
+ ['🎮 조작','<b>PC</b> 이동 WASD · 달리기 Shift · 공격 Space/클릭 · 뒤지기·들어가기 E · 폭죽 F/Q · 아이템 1~5 · 가방 Tab · 손전등 L · 지도 M<br><b>휴대폰</b> 왼쪽 조이스틱 이동 · 오른쪽 ⚔ 공격 · ✋ 뒤지기/들어가기 · 🏃 달리기 · 🧨 폭죽 · 위쪽 아이템 줄 · 오른쪽 위 미니맵(누르면 지도)']
+];
+let HELPI=0,HELPBACK=null,HELPSMS=false;
+function openHelp(fromTitle){HELPBACK=fromTitle?'title':G&&G.state;if(G&&G.state==='field')G.state='pause';HELPI=0;renderHelp()}
+function renderHelp(){
+  const [t,b]=HELP[HELPI],last=HELPI===HELP.length-1;
+  showScreen(`<div class="win big help"><small style="color:var(--dim)">게임 방법 ${HELPI+1}/${HELP.length}</small><h2>${t}</h2><p class="hb">${b}</p>
+  <div class="dots">${HELP.map((_,i)=>`<i class="${i===HELPI?'on':''}" onclick="HELPI=${i};renderHelp()"></i>`).join('')}</div>
+  <div style="display:flex;gap:8px"><button class="btn" style="flex:1" ${HELPI?'':'disabled'} onclick="HELPI--;renderHelp()">이전</button><button class="btn pri" style="flex:1" onclick="${last?'closeHelp()':'HELPI++;renderHelp()'}">${last?'시작하기':'다음'}</button></div>
+  <button class="btn" onclick="closeHelp()">닫기</button></div>`);
+}
+function closeHelp(){try{localStorage.setItem('seoul-survivor-help','1')}catch(e){}if(HELPBACK==='title'){titleScreen();return}closeScreen();if(G){if(HELPBACK==='pause'){pause();return}G.state='field';last=performance.now();if(HELPSMS){HELPSMS=false;setTimeout(()=>{if(G)morningSms()},400)}}}
 function svTime(d){const m=360+d.G.t/DAY*1080;return `${String(m/60|0).padStart(2,'0')}:${String(m%60|0).padStart(2,'0')}${d.area?' · 건물 안':d.base?' · 거점':''}`}
 function gameOver(k){
   G.state='over';clearSave();$('#modal').classList.remove('on');
@@ -1572,6 +1609,28 @@ function toast(msg,cls='',key){
 }
 function clockText(){const m=360+G.t/DAY*1080;const h=m/60|0,mm=(m%60|0);return `${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}`}
 let hudT=0;
+/* 목표 칸: 지금 할 일(최종 목표 단계) + 오늘 할 일 + 생존자. 누르면 전체 목록 */
+let GOALOPEN=(()=>{try{return localStorage.getItem('seoul-survivor-goal')==='1'}catch(e){return false}})();
+function goalSteps(){
+  const all=(k)=>(P.bag[k]||0)+(G.stash[k]||0),need=finalNeed(),pa=all('parts'),ta=all('tape');
+  return [
+    {t:'강남역 지하철 출구(▼)로 지하에 내려가기',d:!!G.seenSub},
+    {t:'북쪽 선로 끝 → 한남대교 건너기',d:!!G.seenBri},
+    {t:'한남대교 북단 → 남산 정상 송신소 찾기',d:!!G.seenNam},
+    {t:`송신기 재료 모으기 — 부품 ${Math.min(pa,need.parts)}/${need.parts} · 테이프 ${Math.min(ta,need.tape)}/${need.tape}`,d:pa>=need.parts&&ta>=need.tape},
+    {t:'송신소 📡에서 송신기 고치고 90초 버티기',d:false}];
+}
+function goalToday(){
+  if(G.final)return `📡 송신 ${Math.floor(G.final.p*100)}% — 송신소 곁을 지켜라`;
+  if(G.t<NIGHT-30){const m=(NIGHT-G.t)/DAY*1080|0;return `☀ 해 지기까지 ${m/60|0}시간 ${m%60}분 · 그 전에 ★ 거점 귀환`}
+  if(G.t<NIGHT)return '🌆 곧 해가 진다 — ★ 거점으로!';
+  return G.zone==='gangnam'&&!G.area?'🌙 밤 — ★ 거점에 들어가 잠자기':'🌙 밤 — 거점(강남)으로 돌아가 잠자기';
+}
+function goalHud(){
+  const el=$('#goal');if(!el||!G)return;const st=goalSteps(),cur=st.find(x=>!x.d)||st[st.length-1],found=SURV_ORDER.filter(id=>G.surv[id].st!=='lost').length;
+  const h=`<div class="gh">🎯 목표 <small>${GOALOPEN?'▲':'▼'}</small></div>`+(GOALOPEN?st.map(x=>`<div class="${x.d?'done':x===cur?'cur':''}">${x.d?'✔':x===cur?'▶':'·'} ${x.t}</div>`).join(''):`<div class="cur">▶ ${cur.t}</div>`)+`<div class="td">${goalToday()}</div>`+(GOALOPEN?`<div class="sv">👥 생존자 ${found}/5 구출 (선택)</div>`:'');
+  if(el._h!==h){el.innerHTML=h;el._h=h}
+}
 function hud(){
   const set=(id,v)=>{$('#b'+id).style.width=clamp(v,0,100)+'%';$('#n'+id).textContent=v|0};
   set('Hp',P.hp);set('Food',P.food);set('Water',P.water);set('Inf',P.inf);
@@ -1584,6 +1643,7 @@ function hud(){
     `<button data-k="b" title="가방 (Tab)">${pimg('backpack',24)}<i><u style="width:${Math.min(100,load*100)|0}%;background:${load>.85?'#e0574d':'#5aa7e0'}"></u></i></button>`;
   const qe=$('#hotbar');if(qe._h!==q){qe.innerHTML=q;qe._h=q}
   drawMini();
+  goalHud();
   let p='';
   if(G.state==='field'){
     if(P.search)p=`뒤지는 중… 움직이면 멈춘다`;

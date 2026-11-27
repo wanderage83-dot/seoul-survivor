@@ -10,8 +10,19 @@ const url=process.argv[2]||'http://127.0.0.1:8795',out=process.argv[3];
     p.on('pageerror',e=>errs.push(e.message));p.on('console',m=>{if(m.type()==='error')errs.push(m.text())});
     await p.goto(url);await p.waitForTimeout(300);
     ok(await p.isVisible('#screen.on'),`${vp.w}: 시작 화면`);
+    ok(await p.evaluate(()=>{const t=$('#screen').textContent;const r=$('#screen .win').getBoundingClientRect();return t.includes('최종 목표')&&t.includes('남산 송신소')&&t.includes('게임 방법')&&r.bottom<=innerHeight+1}),`${vp.w}: 처음 화면에 목표·하루 흐름·게임 방법`);
     await p.click('#screen .btn.pri');await p.waitForTimeout(400);
+    // 처음 시작이면 게임 방법이 먼저 뜬다 → 끝까지 넘기기(각 쪽이 화면 안)
+    const help=await p.evaluate(()=>{const r={open:G.state==='pause'&&$('#screen').textContent.includes('게임 방법 1/'),fit:true};
+      for(let i=0;i<HELP.length;i++){const w=$('#screen .win').getBoundingClientRect();if(w.top<-1||w.bottom>innerHeight+1)r.fit=false;$('#screen .btn.pri').click()}
+      r.closed=G.state==='field';r.flag=localStorage.getItem('seoul-survivor-help')==='1';return r});
+    ok(Object.values(help).every(Boolean),`${vp.w}: 첫 시작에 게임 방법 ${JSON.stringify(help)}`);
     ok(await p.evaluate(()=>G&&G.state==='field'&&Z.length>0),`${vp.w}: 게임 시작·좀비 생성`);
+    const goal=await p.evaluate(()=>{hud();const g=$('#goal'),r=g.getBoundingClientRect(),t=g.textContent;const o={show:r.height>0&&r.right<=innerWidth+1,first:t.includes('지하에 내려가기'),today:t.includes('해 지기까지')};
+      G.seenSub=1;G.seenBri=1;hud();o.next=$('#goal .cur').textContent.includes('남산');G.seenSub=0;G.seenBri=0;
+      G.t=NIGHT+5;hud();o.night=$('#goal').textContent.includes('잠자기');G.t=10;
+      const open=GOALOPEN;g.click();o.toggle=GOALOPEN!==open;g.click();hud();return o});
+    ok(Object.values(goal).every(Boolean),`${vp.w}: 목표 칸 ${JSON.stringify(goal)}`);
     // 기본 화면·재난문자·비·노선도
     await p.waitForTimeout(900);
     const look=await p.evaluate(()=>{
