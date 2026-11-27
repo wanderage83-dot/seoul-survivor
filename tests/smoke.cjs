@@ -140,6 +140,17 @@ const url=process.argv[2]||'http://127.0.0.1:8795',out=process.argv[3];
       G.t=20;CR=[{k:'pigeon',x:P.x+100,y:P.y,r:6,ph:0,wt:9,vx:0,vy:0,run:0,fly:0}];P.run=true;critterTick(.05);r.fly=CR[0].fly>0;P.run=false;
       spawnCritters();r.spawn=CR.length>5;P.bag=keep;CR=[];return r});
     ok(Object.values(fld).every(Boolean),`${vp.w}: 길에서 만들기·쥐·비둘기 ${JSON.stringify(fld)}`);
+    // 각목창·화염병·부탄가스 폭탄
+    const wpn=await p.evaluate(()=>{const r={},ix=n=>RECIPES.findIndex(q=>q.n===n);Z=[];GO=null;const keep=P.bag,kw=P.weapon;
+      Object.assign(G.stash,{wood:3,knife:1,tape:3});G.seen=[...(G.seen||[]),'knife','soju','butane'];craft(ix('각목창'));r.spear=G.stash.spear===1&&WEAP.spear.reach>WEAP.pipe.reach;
+      P.bag={soju:1,cloth:1,butane:2,tape:1,nail:2};craft(ix('화염병'),1);craft(ix('부탄가스 폭탄'),1);r.made=P.bag.molotov===1&&P.bag.bomb===1;
+      P.throwSel='molotov';P.fx=1;P.fy=0;const x0=P.x;for(let i=0;i<4;i++)spawnZ(P.x+140+i*6,P.y,'walker');Z.forEach(z=>z.hp=30);
+      throwFire();r.thr=thrown.some(f=>f.kind==='molotov');const f=thrown.find(f=>f.kind==='molotov');f.st='burn';f.t=0;f.life=4.5;f.k=0;f.x=P.x+140;f.y=P.y;
+      for(let i=0;i<20;i++)update(.1);r.burn=Z.length<4;
+      Z=[];thrown=[];P.throwSel='bomb';for(let i=0;i<3;i++)spawnZ(P.x+200+i*8,P.y,'walker');const hp0=P.hp;throwFire();const b=thrown[0];b.st='fuse';b.t=0;b.life=1.5;b.x=P.x+200;b.y=P.y;
+      for(let i=0;i<20;i++)update(.1);r.boom=Z.length===0&&!thrown.length&&P.hp>=hp0-1;
+      P.bag=keep;P.weapon=kw;Z=[];thrown=[];return r});
+    ok(Object.values(wpn).every(Boolean),`${vp.w}: 각목창·화염병·부탄가스 폭탄 ${JSON.stringify(wpn)}`);
     // 설치물·들개·낚시·문짝
     const trp=await p.evaluate(()=>{const r={};Z=[];GO=null;const keep=P.bag;
       P.bag={plankbar:1,tripwire:1,glass:1,rattrap:1};
