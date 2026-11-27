@@ -133,6 +133,7 @@ body:not(.ingame) #hud,body:not(.ingame) #btns,body:not(.ingame) #joyzone,body:n
 #hotbar .on{border-color:#ffd76a;box-shadow:0 0 8px rgba(255,215,106,.55)}
 #hotbar .gap{width:5px}
 @media (min-width:600px){#hotbar{position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom));transform:translateX(-50%);gap:6px}#hotbar button{width:48px;height:48px;font-size:22px}#hotbar .wp{width:62px}#mini{width:150px;height:150px}}
+@media (max-width:599px){body.ingame #hotbar{position:fixed;left:10px;bottom:calc(16px + env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(4,42px);gap:5px;z-index:5}#hotbar .gap{display:none}#hotbar button,#hotbar .wp{width:42px;height:42px}}
 @media (max-height:500px){#mini{width:96px;height:96px}}
 @media (max-width:380px){#hotbar button{width:35px;height:35px;font-size:16px}#hotbar .wp{width:44px}#bars{width:56vw}#mini{width:96px;height:96px}}
 </style>
@@ -1988,6 +1989,29 @@ function goalToday(){
   if(G.t<NIGHT)return '🌆 곧 해가 진다 — ★ 거점으로!';
   return G.zone==='gangnam'&&!G.area?'🌙 밤 — ★ 거점에 들어가 잠자기':'🌙 밤 — 거점(강남)으로 돌아가 잠자기';
 }
+// 지금 목표가 이 구역에서 가리키는 곳: 다음 구역으로 가는 출입구, 남산이면 송신소. 건물 안·없으면 null
+const ZORD=['gangnam','subway','bridge','namsan'];
+function goalTarget(){
+  if(!G||G.area)return null;const st=goalSteps(),i=st.findIndex(x=>!x.d),ci=ZORD.indexOf(G.zone);
+  let want=i<0||i>=3?'final':ZORD[i+1];
+  if(want!=='final'&&ZORD.indexOf(want)<=ci)want=ci<3?ZORD[ci+1]:'final';
+  const to=want==='final'?(G.zone==='namsan'?'final':ZORD[ci+1]):(ZORD.indexOf(want)>ci+1?ZORD[ci+1]:want);
+  const l=links.find(k=>k.to===to);if(!l)return null;
+  return {x:(l.x+.5)*T,y:(l.y+.5)*T,lab:to==='final'?'📡 송신소':to==='subway'?'▼ 지하 입구':to==='bridge'?'한남대교 쪽':to==='namsan'?'남산 쪽':'목표'};
+}
+function edgeArrow(gx,gy,label,col,yOff){
+  const hs=toScreen(gx,gy);if(hs.x>=10&&hs.y>=10&&hs.x<=W-10&&hs.y<=H-10)return;
+  const cx=W/2,cy=H/2,a=Math.atan2(hs.y-cy,hs.x-cx),m=40+(yOff||0);
+  const k=Math.min((W/2-m)/Math.abs(Math.cos(a)||1e-6),(H/2-m-60)/Math.abs(Math.sin(a)||1e-6));
+  const ax=cx+Math.cos(a)*k,ay=cy+Math.sin(a)*k;
+  ctx.save();ctx.translate(ax,ay);ctx.rotate(a);ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(14,0);ctx.lineTo(-6,-8);ctx.lineTo(-6,8);ctx.closePath();ctx.fill();ctx.restore();
+  ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.lineWidth=3;ctx.strokeStyle='rgba(0,0,0,.7)';const t=`${label} ${Math.round(hyp(P.x-gx,P.y-gy)/T)}m`,tx=ax-Math.cos(a)*26,ty=ay-Math.sin(a)*24+4;ctx.strokeText(t,tx,ty);ctx.fillStyle=col;ctx.fillText(t,tx,ty);
+}
+function drawGoalMark(){
+  const g=goalTarget();if(!g)return;const p=(Math.sin(performance.now()/260)+1)/2;
+  ctx.save();ctx.strokeStyle=`rgba(255,138,90,${.6+.4*p})`;ctx.lineWidth=2.5;ctx.beginPath();ctx.ellipse(g.x,g.y,22+p*6,(22+p*6)*.55,0,0,7);ctx.stroke();
+  ctx.font='bold 13px sans-serif';ctx.textAlign='center';ctx.lineWidth=3;ctx.strokeStyle='rgba(0,0,0,.8)';ctx.strokeText('🎯 '+g.lab,g.x,g.y-34-p*4);ctx.fillStyle='#ff9a6a';ctx.fillText('🎯 '+g.lab,g.x,g.y-34-p*4);ctx.restore();
+}
 function goalHud(){
   const el=$('#goal');if(!el||!G)return;const st=goalSteps(),cur=st.find(x=>!x.d)||st[st.length-1],found=SURV_ORDER.filter(id=>G.surv[id].st!=='lost').length;
   const h=`<div class="gh">🎯 목표 <small>${GOALOPEN?'▲':'▼'}</small></div>`+(GOALOPEN?st.map(x=>`<div class="${x.d?'done':x===cur?'cur':''}">${x.d?'✔':x===cur?'▶':'·'} ${x.t}</div>`).join(''):`<div class="cur">▶ ${cur.t}</div>`)+`<div class="td">${goalToday()}</div>`+(GOALOPEN?`<div class="sv">👥 생존자 ${found}/5 구출 (선택)</div>`:'');
@@ -2075,7 +2099,7 @@ function render0(){
   if(!G.area&&G.zone==='gangnam'){ctx.strokeStyle=`rgba(230,185,76,${.35+.35*pulse})`;ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(hx,hy,30,18,0,0,7);ctx.stroke()}
   // 소리 원
   for(const n of noises){const k=n.t/.8;ctx.strokeStyle=`rgba(${n.col},${.45*(1-k)})`;ctx.lineWidth=2/zoom+1;ctx.beginPath();ctx.ellipse(n.x,n.y,n.r*Math.min(1,k*1.6),n.r*Math.min(1,k*1.6)*.7,0,0,7);ctx.stroke()}
-  drawFinal();drawTraps();drawCritters();if(VLOOK==='basic')drawNests();drawGo();
+  drawFinal();drawGoalMark();drawTraps();drawCritters();if(VLOOK==='basic')drawNests();drawGo();
   // 뒤질 것
   for(const c of conts){if(c.car||c.x<vx0||c.x>vx1||c.y<vy0||c.y>vy1)continue;drawCont(c)}
   // 깊이 정렬
@@ -2132,6 +2156,7 @@ function render0(){
   let gx=hx,gy=hy,gl='거점';
   if(G.zone!=='gangnam'){const bl=links.filter(l=>l.to===ZONES[G.zone].back).sort((a,b)=>hyp((a.x+.5)*T-P.x,(a.y+.5)*T-P.y)-hyp((b.x+.5)*T-P.x,(b.y+.5)*T-P.y))[0];if(bl){gx=(bl.x+.5)*T;gy=(bl.y+.5)*T;gl='돌아가는 길'}}
   const hs=toScreen(gx,gy);
+  {const g=goalTarget();if(g)edgeArrow(g.x,g.y,'🎯 '+g.lab.replace(/^\S+ /,''),'#ff9a6a',18)}
   if(!G.area&&(hs.x<10||hs.y<10||hs.x>W-10||hs.y>H-10)){
     const cx=W/2,cy=H/2,a=Math.atan2(hs.y-cy,hs.x-cx),m=40;
     const k=Math.min((W/2-m)/Math.abs(Math.cos(a)||1e-6),(H/2-m-60)/Math.abs(Math.sin(a)||1e-6));
@@ -2299,7 +2324,7 @@ function openMap(){
   const seen=new Set([...Object.keys(ZC),...Object.keys(G.zoneSave||{}),G.zone]);
   const line=`<div class="ln">${['gangnam','subway','bridge','namsan'].map(id=>`<div class="st ${id===G.zone?'cur':seen.has(id)?'v':''}"><i></i>${seen.has(id)?ZONES[id].n.replace('강남역 지하상가·선로','지하·선로').replace('강남역 일대','강남역'):'???'}${id==='gangnam'?' ★':''}</div>`).join('')}</div>`;
   const m=$('#modal');
-  m.innerHTML=`<div class="win" style="width:auto"><div class="whead"><div><h2>${ZONES[G.zone].n}</h2><small>${G.zone==='gangnam'?'★ 거점 · ● 나 · ? 생존자 신호 · ▼ 지하 입구':'● 나 · ▲▼ 다른 구역으로 · 📡 송신소'}</small></div><button class="btn" style="flex:0 0 auto;padding:6px 12px" onclick="closeMap()">닫기</button></div>${line}<div style="padding:8px;display:flex;justify-content:center"><canvas id="mapc" width="${MW*s*DPR|0}" height="${MH*s*DPR|0}" style="width:${MW*s|0}px;height:${MH*s|0}px;position:static;display:block;border-radius:6px"></canvas></div></div>`;
+  m.innerHTML=`<div class="win" style="width:auto"><div class="whead"><div><h2>${ZONES[G.zone].n}</h2><small>${G.zone==='gangnam'?'● 나 · 🎯 목표 · ★ 거점 · ? 생존자 신호 · ⚠ 소굴':'● 나 · 🎯 목표 · ▲▼ 다른 구역으로 · ⚠ 소굴'}</small></div><button class="btn" style="flex:0 0 auto;padding:6px 12px" onclick="closeMap()">닫기</button></div>${line}<div style="padding:8px;display:flex;justify-content:center"><canvas id="mapc" width="${MW*s*DPR|0}" height="${MH*s*DPR|0}" style="width:${MW*s|0}px;height:${MH*s|0}px;position:static;display:block;border-radius:6px"></canvas></div></div>`;
   m.classList.add('on');
   const c=$('#mapc').getContext('2d');c.scale(DPR*s,DPR*s);
   const COL=['#3a3d42','#57544d','#3e4934','#4a4640','#6a3532','#5b5852','#24211e','#08080a','#5b5852','#5b5852','#5b5852','#1f3a4d','#3b3631','#6d6a64','#08080a','#8a8680','#7a6a4a'];
@@ -2319,6 +2344,11 @@ function openMap(){
   for(const id of SURV_ORDER){const sv=G.surv[id];if(sv.st!=='lost'||!hinted(id))continue;const b=survBuilding(sv);if(!b)continue;c.fillStyle='#ffd76a';c.beginPath();c.arc(b.x+b.w/2,b.y+b.h/2,2.4,0,7);c.fill();c.fillStyle='#2a1f10';c.font=`bold ${Math.max(3,12/s)}px sans-serif`;c.fillText('?',b.x+b.w/2,b.y+b.h/2+1.2)}
   c.fillStyle='#e6b94c';c.font=`bold ${Math.max(4,16/s)}px sans-serif`;c.fillText('★',HOME_TILE.x+.5,HOME_TILE.y+1.5);
   }
+  for(const [i,n] of (NEST[G.seed+'|'+G.zone]||[]).entries()){const f=nestFired(i);c.strokeStyle=f?'rgba(200,90,80,.5)':'#ff4a3a';c.lineWidth=.5;c.setLineDash([1.2,.8]);c.beginPath();c.arc(n.x/T,n.y/T,NEST_R/T,0,7);c.stroke();c.setLineDash([]);if(!f){c.fillStyle='rgba(255,60,40,.18)';c.fill()}
+    c.fillStyle=f?'#c99':'#ff6a5a';c.font=`bold ${Math.max(2.6,10/s)}px sans-serif`;c.fillText((f?'':'⚠ ')+n.name,n.x/T,n.y/T-NEST_R/T-1)}
+  for(const t of TRAPS)if(t.key===goKey()&&(t.ping||t.k==='rattrap')){c.fillStyle=t.ping?'#ffd35a':'#c9a06a';c.beginPath();c.arc(t.x/T,t.y/T,t.ping?1.6:1,0,7);c.fill()}
+  {const g=goalTarget();if(g){c.strokeStyle='#ff8a5a';c.lineWidth=.7;c.beginPath();c.arc(g.x/T,g.y/T,3,0,7);c.stroke();c.beginPath();c.arc(g.x/T,g.y/T,1.6,0,7);c.stroke();
+    c.fillStyle='#ff9a6a';c.font=`bold ${Math.max(3,12/s)}px sans-serif`;c.fillText('🎯 '+g.lab,g.x/T,g.y/T-4)}}
   c.fillStyle='#ff5a4a';c.beginPath();c.arc(PX,PY,1.4,0,7);c.fill();
   c.strokeStyle='#ff5a4a';c.lineWidth=.6;c.beginPath();c.moveTo(PX,PY);c.lineTo(PX+P.fx*3,PY+P.fy*3);c.stroke();
 }
@@ -2344,6 +2374,9 @@ function drawMini(){
   const now=performance.now();
   if(!G.area){
     for(const [i,n] of nests().entries()){const [x,y]=M(n.x/T,n.y/T);c.strokeStyle=nestFired(i)?'rgba(200,90,80,.4)':'#ff4a3a';c.lineWidth=1.5;c.beginPath();c.arc(x,y,NEST_R/T*sc*.7,0,7);c.stroke();if(!nestFired(i)){c.fillStyle='rgba(255,60,40,.25)';c.fill()}}
+    {const g=goalTarget();if(g){let [x,y]=M(g.x/T,g.y/T);const out=x<4||y<4||x>S-4||y>S-4;x=clamp(x,5,S-5);y=clamp(y,5,S-5);c.fillStyle='#ff8a5a';c.strokeStyle='#ff8a5a';
+      if(out){const a=Math.atan2(y-S/2,x-S/2);c.save();c.translate(x,y);c.rotate(a);c.beginPath();c.moveTo(5,0);c.lineTo(-3,-4);c.lineTo(-3,4);c.closePath();c.fill();c.restore()}
+      else{c.lineWidth=1.5;c.beginPath();c.arc(x,y,3+(now/150%5),0,7);c.stroke();c.beginPath();c.arc(x,y,2,0,7);c.fill()}}}
     for(const t of TRAPS)if(t.ping&&t.key===goKey()){const [x,y]=M(t.x/T,t.y/T);c.strokeStyle='#ffd35a';c.lineWidth=2;c.beginPath();c.arc(x,y,3+(now/120%6),0,7);c.stroke()}
     for(const l of links){const [x,y]=M(l.x+.5,l.y+.5);c.fillStyle=l.to==='final'?'#ff8a5a':'#ffd76a';c.fillRect(x-2.5,y-2.5,5,5)}
     if(G.zone==='gangnam'){const [x,y]=M(HOME_TILE.x+.5,HOME_TILE.y+.5);c.fillStyle='#e6b94c';c.font='bold 13px sans-serif';c.textAlign='center';c.fillText('★',x,y+4)

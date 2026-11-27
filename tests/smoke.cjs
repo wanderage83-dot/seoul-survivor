@@ -92,6 +92,11 @@ const url=process.argv[2]||'http://127.0.0.1:8795',out=process.argv[3];
     tm.cancel=await p.evaluate(()=>{const ok=goTo(W*.75,H*.3);keys.KeyD=true;update(.016);keys.KeyD=false;return ok?GO===null:true});
     await p.evaluate(()=>{GO=null;Z=[];P.x=(HOME_TILE.x+.5)*T;P.y=(HOME_TILE.y+.8)*T});
     ok(Object.values(tm).every(Boolean),`${vp.w}: 눌러서 가기(땅·좀비·상자·키 취소) ${JSON.stringify(tm)}`);
+    // 아이템 줄이 화면 아래에 붙음 · 목표가 화면·미니맵·지도에 표시
+    const mk=await p.evaluate(()=>{const r={},hb=$('#hotbar').getBoundingClientRect();r.bottom=hb.bottom>innerHeight-80&&hb.bottom<=innerHeight;
+      G.seenSub=0;const g=goalTarget();r.goal=!!g&&links.some(l=>l.to==='subway'&&(l.x+.5)*T===g.x);
+      openMap();r.map=$('#modal').textContent.includes('목표');closeMap();return r});
+    ok(Object.values(mk).every(Boolean),`${vp.w}: 아이템 줄 아래·목표 표시 ${JSON.stringify(mk)}`);
     // 조이스틱 없음·두 번 누르면 달리기
     const dbl=await p.evaluate(()=>({nojoy:getComputedStyle($('#joyzone')).display==='none'}));
     {const g1=await p.evaluate(()=>{Z=[];GO=null;const sx=P.x/T|0,sy=P.y/T|0;for(let r=4;r<12;r++)for(let i=-r;i<=r;i++)for(const j of [-r,r])for(const [u,v] of [[i,j],[j,i]])if(walk(sx+u,sy+v)){const x=(sx+u+.5)*T,y=(sy+v+.5)*T,a=(x-P.x)*zoom+W/2,b=(y-P.y+18)*zoom+H/2,el=document.elementFromPoint(a,b);if(el&&el.id==='cv'&&a>20&&b>20)return {a,b}}return null});
