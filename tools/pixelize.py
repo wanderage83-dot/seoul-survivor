@@ -51,11 +51,14 @@ def outline(im):
 def sprite(src,H=32):
     im=biggest(unbg(Image.open(src)));bb=im.getchannel('A').getbbox();im=im.crop(bb)
     w=max(1,round(im.width*H/im.height));return outline(topal(im.resize((w,H),Image.BOX)))
-def sheet(src,cols,rows,H=32):
+def sheet(src,cols,rows,H=32,tight=False):
+    # tight: 키 큰(8등신) 캐릭터용. 칸 가로를 그림이 차지한 너비(가장 넓은 칸 기준)로 좁혀 세로로 긴 칸을 만든다
     im=unbg(Image.open(src));cw,ch=im.width//cols,im.height//rows;cells=[]
     for r in range(rows):
         for c in range(cols):cells.append(im.crop((c*cw,r*ch,(c+1)*cw,(r+1)*ch)))
     boxes=[c.getchannel('A').getbbox() for c in cells];hmax=max((b[3]-b[1]) for b in boxes if b)
+    if tight:
+        wmax=max((max(cw/2-b[0],b[2]-cw/2)*2) for b in boxes if b)+8;x0=int(max(0,cw/2-wmax/2));cells=[c.crop((x0,0,int(min(cw,x0+wmax)),ch)) for c in cells];boxes=[c.getchannel('A').getbbox() for c in cells];cw=cells[0].width
     k=H/hmax;W=max(round(cw*k),1);out=Image.new('RGBA',(cols*(W+2),rows*(H+4)),(0,0,0,0))
     for i,c in enumerate(cells):
         b=boxes[i]

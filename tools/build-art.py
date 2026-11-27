@@ -20,8 +20,10 @@ def pop(f,name):
     im=Image.open(f).convert('RGB');im=ImageEnhance.Brightness(im).enhance(1.3);im=ImageEnhance.Contrast(im).enhance(1.25);im=ImageEnhance.Color(im).enhance(1.35)
     t=f'/tmp/_pop_{name}.png';im.save(t);return t
 for c in CHARS:
-    f=raw(c)
-    if f:sheet(pop(f,c),3,4,24).save(f'{OUT}/{c}.png');done.append(c)
+    # art/raw/..<이름>_tall.png 이 있으면 8등신(키 큰) 시트로: 논리 키 48px, 칸을 세로로 길게
+    ft=raw(c+'_tall');f=raw(c)
+    if ft:sheet(pop(ft,c),3,4,48,tight=True).save(f'{OUT}/{c}.png');done.append(c+'(8등신)')
+    elif f:sheet(pop(f,c),3,4,24).save(f'{OUT}/{c}.png');done.append(c)
 for sh,items in PROPS.items():
     f=raw(sh)
     if not f:continue

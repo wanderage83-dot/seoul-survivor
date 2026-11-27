@@ -911,8 +911,9 @@ const ART={},PATS=new Map();
 for(const n of ART_READY){const im=new Image();im.onload=()=>{ART[n]=im};im.src='art/'+n+'.png'}
 function pat(n){const im=ART[n];if(!im)return null;const k=n+(ctx===mctx?'m':'l');let p=PATS.get(k);if(!p){p=ctx.createPattern(im,'repeat');PATS.set(k,p)}return p}
 const TILE_ART={0:'t_asphalt',1:'t_sidewalk',2:'t_grass',3:'t_alley',4:'t_asphalt'},FLOOR_ART={villa:'t_floor_wood',food:'t_floor_wood',office:'t_floor_tile',shop:'t_floor_tile',under:'t_subway'};
+const TALL_H=74;
 function drawSheet(n,o,moving,alpha){
-  const im=ART[n];if(!im)return false;const fw=im.width/3,fh=im.height/4,S=2,w=fw*S,h=fh*S;
+  const im=ART[n];if(!im)return false;const fw=im.width/3,fh=im.height/4,S=fh/fw>1.5?TALL_H/fh:2,w=fw*S,h=fh*S;
   const row=Math.abs(o.fx||0)>Math.abs(o.fy||0)?(o.fx<0?1:2):((o.fy||0)<-.1?3:0);
   const col=moving?[0,1,2,1][Math.floor((o.ph||0)*.55)%4]:1;
   ctx.fillStyle='rgba(0,0,0,.32)';ctx.beginPath();ctx.ellipse(o.x,o.y+2,11,4,0,0,7);ctx.fill();
@@ -2265,10 +2266,10 @@ function v3signsDraw(){
 }
 function hashF(a,b){const s=Math.sin(a*127.1+b*311.7)*43758.5453;return s-Math.floor(s)}
 // 사람·좀비: 기존 그리기 함수를 64×88 캔버스에 그려 세운 그림으로
-function v3sprite(i){let s=V3.sprites[i];if(s)return s;const c=document.createElement('canvas');c.width=64;c.height=88;const t=new V3.T.CanvasTexture(c);t.magFilter=V3.T.NearestFilter;t.minFilter=V3.T.NearestFilter;t.colorSpace=V3.T.SRGBColorSpace;
+function v3sprite(i){let s=V3.sprites[i];if(s)return s;const c=document.createElement('canvas');c.width=64;c.height=112;const t=new V3.T.CanvasTexture(c);t.magFilter=V3.T.NearestFilter;t.minFilter=V3.T.NearestFilter;t.colorSpace=V3.T.SRGBColorSpace;
   // 똑바로 선 판(위로 기울지 않게): 카메라 쪽(+z)을 보고, 비스듬히 내려다볼 때 납작해지는 만큼 세로로 늘린다. 발이 바닥에 닿게 아래를 기준으로
-  const geo=new V3.T.PlaneGeometry(1,1);geo.translate(0,.5-14/88,0);
-  const sp=new V3.T.Mesh(geo,new V3.T.MeshBasicMaterial({map:t,transparent:true,alphaTest:.05,fog:true,side:V3.T.DoubleSide,depthWrite:true}));sp.scale.set(64/T,88/T/Math.cos(.95),1);sp.renderOrder=2;V3.scene.add(sp);s={c,x:c.getContext('2d'),t,sp};V3.sprites[i]=s;return s}
+  const geo=new V3.T.PlaneGeometry(1,1);geo.translate(0,.5-14/112,0);
+  const sp=new V3.T.Mesh(geo,new V3.T.MeshBasicMaterial({map:t,transparent:true,alphaTest:.05,fog:true,side:V3.T.DoubleSide,depthWrite:true}));sp.scale.set(64/T,112/T/Math.cos(.95),1);sp.renderOrder=2;V3.scene.add(sp);s={c,x:c.getContext('2d'),t,sp};V3.sprites[i]=s;return s}
 function render3D(){
   const T3=V3.T,day=G.t<NIGHT,nightK=clamp((G.t-NIGHT+25)/30,0,1),inDark=!!(G.area||ZONES[G.zone].dark),nk=inDark?Math.max(G.area&&G.t<NIGHT-20?.55:.88,nightK):nightK;
   if(V3.cv.style.display==='none')V3.cv.style.display='block';
@@ -2304,7 +2305,7 @@ function render3D(){
     if(front!==!!m.userData.faded){m.userData.faded=front;for(const k of m.userData.kids)k.visible=!front;m.castShadow=!front;m.material=front?m.userData.mat.map(q=>v3mat('fade'+q.uuid,()=>{const c=q.clone();c.transparent=true;c.opacity=.28;c.depthWrite=false;return c})):m.userData.mat}}
   // 세운 그림
   const ents=[[4,P]];if(ALLY)ents.push([7,ALLY]);for(const n of NPCS)ents.push([8,n]);for(const z of Z)if(Math.abs(z.x/T-tx)<20&&Math.abs(z.y/T-tz)<16)ents.push([3,z]);
-  let i=0;for(const [k,o] of ents){const s=v3sprite(i++);s.sp.visible=true;ctx=s.x;ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,64,88);ctx.setTransform(1,0,0,1,32-o.x,74-o.y);drawObj(k,o);ctx=mctx;s.t.needsUpdate=true;
+  let i=0;for(const [k,o] of ents){const s=v3sprite(i++);s.sp.visible=true;ctx=s.x;ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,64,112);ctx.setTransform(1,0,0,1,32-o.x,98-o.y);drawObj(k,o);ctx=mctx;s.t.needsUpdate=true;
     s.sp.position.set(o.x/T,0,o.y/T);
     // 밤엔 손전등·불빛 안만 밝게
     let L=1-nk*.85;if(nk>0){const dx=o.x-P.x,dy=o.y-P.y,d=hyp(dx,dy);if(o===P||d<44)L=Math.max(L,.9);else if(lit&&d<300){const a=Math.abs(angdiff(Math.atan2(P.fy,P.fx),Math.atan2(dy,dx)));if(a<.5)L=Math.max(L,1-d/340)}if(fire&&hyp(o.x-fire.x,o.y-fire.y)<120)L=Math.max(L,.9)}
