@@ -1174,18 +1174,29 @@ addEventListener('keydown',e=>{
 addEventListener('keyup',e=>{keys[e.code]=false});
 addEventListener('blur',()=>{for(const k in keys)keys[k]=false});
 const jz=$('#joyzone'),jb=$('#joy'),kn=$('#knob');
-jz.addEventListener('pointerdown',e=>{if(joy.on)return;joy.on=true;joy.id=e.pointerId;const r=jb.getBoundingClientRect();joy.ox=r.left+r.width/2;joy.oy=r.top+r.height/2;jz.setPointerCapture(e.pointerId);joyMove(e)});
+jz.addEventListener('pointerdown',e=>{if(joy.on)return;joy.on=true;joy.id=e.pointerId;joy.sx=e.clientX;joy.sy=e.clientY;joy.st=performance.now();joy.far=0;const r=jb.getBoundingClientRect();joy.ox=r.left+r.width/2;joy.oy=r.top+r.height/2;jz.setPointerCapture(e.pointerId);joyMove(e)});
 jz.addEventListener('pointermove',e=>{if(joy.on&&e.pointerId===joy.id)joyMove(e)});
-const joyEnd=e=>{if(e.pointerId!==joy.id)return;joy.on=false;joy.x=joy.y=0;kn.style.transform=''};
+const joyEnd=e=>{if(e.pointerId!==joy.id)return;joy.on=false;joy.x=joy.y=0;kn.style.transform='';if(e.type==='pointerup'&&!joy.far&&performance.now()-joy.st<300)goTo(e.clientX,e.clientY)};
 jz.addEventListener('pointerup',joyEnd);jz.addEventListener('pointercancel',joyEnd);
-function joyMove(e){let dx=e.clientX-joy.ox,dy=e.clientY-joy.oy;const l=hyp(dx,dy),m=46;if(l>m){dx*=m/l;dy*=m/l}joy.x=dx/m;joy.y=dy/m;kn.style.transform=`translate(${dx}px,${dy}px)`}
+function joyMove(e){if(hyp(e.clientX-joy.sx,e.clientY-joy.sy)>12)joy.far=1;let dx=e.clientX-joy.ox,dy=e.clientY-joy.oy;const l=hyp(dx,dy),m=46;if(l>m){dx*=m/l;dy*=m/l}joy.x=dx/m;joy.y=dy/m;kn.style.transform=`translate(${dx}px,${dy}px)`}
 const tap=(id,f)=>$(id).addEventListener('pointerdown',e=>{e.preventDefault();if(G&&G.state==='field')f()});
 tap('#bAtk',()=>attack());tap('#bUse',()=>interact());tap('#bThrow',()=>throwFire());
 tap('#bRun',()=>{runToggle=!runToggle;$('#bRun').classList.toggle('on',runToggle)});
+const TAPD={id:null,x:0,y:0,t:0,hold:0};
 document.getElementById('cv').addEventListener('pointerdown',e=>{
-  if(!G||G.state!=='field'||e.pointerType==='touch')return;
+  if(!G||G.state!=='field')return;
+  if(e.pointerType==='touch'){TAPD.id=e.pointerId;TAPD.x=e.clientX;TAPD.y=e.clientY;TAPD.t=performance.now();return}
   const w=toWorld(e.clientX,e.clientY);const dx=w.x-P.x,dy=w.y-P.y+14,l=hyp(dx,dy)||1;P.fx=dx/l;P.fy=dy/l;
-  if(e.button===2)throwFire();else attack();
+  if(e.button===2){throwFire();return}
+  if(e.button===0){goTo(e.clientX,e.clientY);TAPD.hold=performance.now()}
+});
+document.getElementById('cv').addEventListener('pointermove',e=>{
+  if(e.pointerType==='touch'||!(e.buttons&1)||!G||G.state!=='field')return;
+  const n=performance.now();if(n-TAPD.hold<150||(GO&&GO.kind!=='go'))return;TAPD.hold=n;goTo(e.clientX,e.clientY);
+});
+document.getElementById('cv').addEventListener('pointerup',e=>{
+  if(e.pointerType!=='touch'||e.pointerId!==TAPD.id)return;TAPD.id=null;
+  if(hyp(e.clientX-TAPD.x,e.clientY-TAPD.y)<14&&performance.now()-TAPD.t<500)goTo(e.clientX,e.clientY);
 });
 document.getElementById('cv').addEventListener('contextmenu',e=>e.preventDefault());
 $('#pausebtn').addEventListener('click',()=>{if(G&&G.state==='field')pause()});
@@ -1194,6 +1205,57 @@ $('#mini').addEventListener('click',()=>openMap());
 $('#goal').addEventListener('click',()=>{GOALOPEN=!GOALOPEN;try{localStorage.setItem('seoul-survivor-goal',GOALOPEN?'1':'0')}catch(e){}if(G)goalHud()});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&G){saveGame();if(G.state==='field')pause()}});
 if(matchMedia('(pointer:coarse)').matches)document.body.classList.add('touch');
+
+/* ───────── 눌러서 가기(터치·클릭) ─────────
+   땅을 누르면 그곳까지 길을 찾아 걷고, 좀비를 누르면 쫓아가 때리고, 상자·문·계단·사람·거점을 누르면 가서 쓴다.
+   키보드·조이스틱을 움직이면 바로 취소. GO.D는 목표 칸에서 퍼진 BFS(fieldDir로 한 칸씩 내려감). */
+let GO=null;
+const goKey=()=>G.zone+'|'+(G.area?G.area.b.x+','+G.area.b.y+','+G.area.f:'');
+function pickTarget(w){
+  let z=null,zd=30;for(const q of Z){const d=hyp(q.x-w.x,q.y-14-w.y);if(d<zd){zd=d;z=q}}
+  if(z)return {kind:'z',z,x:z.x,y:z.y};
+  let b=null,bd=1e9;const A=(x,y,r,ok,lab)=>{const d=hyp(x-w.x,y-w.y);if(d<r&&d<bd){bd=d;b={kind:'act',x,y,ok,lab}}};
+  for(const c of conts)A(c.x,c.y,26,()=>nearCont()===c,'뒤지기');
+  if(G.area){for(const n of NPCS)A(n.x,n.y,30,()=>nearNpc()===n,'말 걸기');
+    const tx=w.x/T|0,ty=w.y/T|0,t=tile[ty*MW+tx];if(t>=8&&t<=10)A((tx+.5)*T,(ty+.5)*T,40,()=>inTile()===t,t===10?'나가기':'계단')}
+  else{if(G.zone==='gangnam')A((HOME_TILE.x+.5)*T,(HOME_TILE.y+.5)*T,40,nearHome,'거점');
+    for(const l of links)A((l.x+.5)*T,(l.y+.5)*T,34,()=>nearLink()===l,'이동');
+    for(const bb of buildings)if(bb.floors)A((bb.door.x+.5)*T,(bb.door.y+.5)*T,26,()=>doorBuilding()===bb,'들어가기')}
+  return b||{kind:'go',x:w.x,y:w.y};
+}
+function goTo(sx,sy){
+  if(!G||G.state!=='field')return false;
+  const w=toWorld(sx,sy),t=pickTarget(w);
+  if(P.search){P.search=null;toast('뒤지기를 멈췄다','','stop')}
+  if(t.kind==='go'){const tx=t.x/T|0,ty=t.y/T|0;if(!walk(tx,ty)){let bd=1e9;for(let j=-3;j<=3;j++)for(let i=-3;i<=3;i++)if(walk(tx+i,ty+j)){const x=(tx+i+.5)*T,y=(ty+j+.5)*T,d=hyp(x-t.x,y-t.y);if(d<bd){bd=d;t.nx=x;t.ny=y}}if(bd<1e9){t.x=t.nx;t.y=t.ny}}}
+  if(t.kind==='act'&&t.ok()){GO=null;interact();return true}
+  t.D=bfs(t.x,t.y);const here=t.D[(P.y/T|0)*MW+(P.x/T|0)];
+  if(here<0){toast('갈 수 없는 곳','','nogo');GO=null;return false}
+  t.key=goKey();t.re=.3;t.st=0;t.lx=P.x;t.ly=P.y;t.born=performance.now();GO=t;return true;
+}
+function goStep(dt){
+  const t=GO;if(t.key!==goKey()){GO=null;return null}
+  if(t.kind==='z'){
+    if(!Z.includes(t.z)||t.z.hp<=0){GO=null;return null}
+    const w=WEAP[P.weapon.id],dx=t.z.x-P.x,dy=t.z.y-P.y,d=hyp(dx,dy)||1;
+    if(d<w.reach+t.z.r-4){P.fx=dx/d;P.fy=dy/d;if(P.atkCd<=0)attack();return null}
+    t.re-=dt;if(t.re<=0){t.re=.3;t.D=bfs(t.z.x,t.z.y);t.x=t.z.x;t.y=t.z.y}
+  }else if(t.kind==='act'){if(t.ok()){GO=null;interact();return null}}
+  else if(hyp(t.x-P.x,t.y-P.y)<10){GO=null;return null}
+  // 막혀서 못 가면 멈춤
+  t.st+=dt;if(t.st>.6){if(hyp(P.x-t.lx,P.y-t.ly)<6&&t.kind!=='z'){GO=null;return null}t.st=0;t.lx=P.x;t.ly=P.y}
+  const v=fieldDir(P,t.D,t.x,t.y);if(!v){GO=null;return null}
+  const l=hyp(v[0],v[1]);if(l<1){if(t.kind==='go')GO=null;return null}
+  return [v[0]/l,v[1]/l];
+}
+function drawGo(){
+  if(!GO)return;const t=GO,a=(performance.now()-t.born)/1000,p=(Math.sin(a*6)+1)/2;
+  const x=t.kind==='z'?t.z.x:t.x,y=t.kind==='z'?t.z.y:t.y;
+  ctx.save();ctx.lineWidth=2;ctx.strokeStyle=t.kind==='z'?'rgba(255,90,70,.9)':t.kind==='act'?'rgba(255,214,110,.9)':'rgba(140,220,255,.85)';
+  const r=t.kind==='go'?Math.max(6,14-a*20)+p*3:16+p*3;ctx.beginPath();ctx.ellipse(x,y,r,r*.55,0,0,7);ctx.stroke();
+  if(t.kind==='go'&&a<.3){ctx.globalAlpha=1-a/.3;ctx.beginPath();ctx.ellipse(x,y,6+a*90,(6+a*90)*.55,0,0,7);ctx.stroke()}
+  ctx.restore();
+}
 
 /* ───────── 플레이어 행동 ───────── */
 const bagCount=()=>Object.values(P.bag).reduce((a,b)=>a+b,0);
@@ -1280,6 +1342,7 @@ function update(dt){
   if(joy.on){mx=joy.x;my=joy.y}
   let mag=Math.min(1,hyp(mx,my));
   if(mag<.15)mag=0;
+  if(mag>0)GO=null;else if(GO){const v=goStep(dt);if(v){mx=v[0];my=v[1];mag=1}}
   const run=(keys.ShiftLeft||keys.ShiftRight||runToggle)&&mag>0;P.run=run;
   if(P.search){if(mag>0){P.search=null;toast('뒤지기를 멈췄다','','stop')}else{P.search.t+=dt;if(P.search.t>=searchTime())finishSearch()}}
   if(mag>0){
@@ -1563,7 +1626,7 @@ const HELP=[
  ['🔊 소리와 좀비','걷기·달리기·공격·뒤지기 모두 <b>소리</b>를 낸다. 소리를 들은 좀비가 확인하러 온다.<br>눈치채지 못한 좀비를 치면 기습 피해. <b>비명꾼</b>은 다른 좀비를 부르니 먼저 잡자. 깜박이는 차 트렁크는 경보가 울린다. 폭죽(5)을 던져 좀비를 끌어낼 수 있다.'],
  ['🎒 뒤지기와 가방','상자·가게·차 트렁크 앞에서 [E/✋] → 전리품 창에서 줍는다.<br>가방은 <b>칸</b>으로 찬다. 끌어서 옮기고, 「정렬」·「정리」로 빈칸을 만든다. 무기·헬멧·조끼·배낭·손전등은 장비 칸에 끼운다.'],
  ['🏠 거점과 동료','거점에서 창고 정리, <b>제작</b>(붕대·폭죽·무기), <b>시설</b>(빗물 받이·텃밭·바리케이드). 3일마다 밤 습격이 온다.<br>생존자 5명이 건물 위층에 숨어 있다. 재난문자·동료 탭의 신호를 따라가 데려오면 매일 돕는다.'],
- ['🎮 조작','<b>PC</b> 이동 WASD · 달리기 Shift · 공격 Space/클릭 · 뒤지기·들어가기 E · 폭죽 F/Q · 아이템 1~5 · 가방 Tab · 손전등 L · 지도 M<br><b>휴대폰</b> 왼쪽 조이스틱 이동 · 오른쪽 ⚔ 공격 · ✋ 뒤지기/들어가기 · 🏃 달리기 · 🧨 폭죽 · 위쪽 아이템 줄 · 오른쪽 위 미니맵(누르면 지도)']
+ ['🎮 조작','<b>누르기</b> 땅을 누르면 그곳으로 걸어간다. 좀비를 누르면 쫓아가 때리고, 상자·문·계단·사람을 누르면 가서 쓴다(누른 채 끌면 계속 따라감)<br><b>PC</b> 이동 WASD · 달리기 Shift · 공격 Space · 클릭 가기·공격 · 뒤지기·들어가기 E · 폭죽 F/Q · 아이템 1~5 · 가방 Tab · 손전등 L · 지도 M<br><b>휴대폰</b> 왼쪽 조이스틱 이동 · 오른쪽 ⚔ 공격 · ✋ 뒤지기/들어가기 · 🏃 달리기 · 🧨 폭죽 · 위쪽 아이템 줄 · 오른쪽 위 미니맵(누르면 지도)']
 ];
 let HELPI=0,HELPBACK=null,HELPSMS=false;
 function openHelp(fromTitle){HELPBACK=fromTitle?'title':G&&G.state;if(G&&G.state==='field')G.state='pause';HELPI=0;renderHelp()}
@@ -1711,7 +1774,7 @@ function render0(){
   if(!G.area&&G.zone==='gangnam'){ctx.strokeStyle=`rgba(230,185,76,${.35+.35*pulse})`;ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(hx,hy,30,18,0,0,7);ctx.stroke()}
   // 소리 원
   for(const n of noises){const k=n.t/.8;ctx.strokeStyle=`rgba(${n.col},${.45*(1-k)})`;ctx.lineWidth=2/zoom+1;ctx.beginPath();ctx.ellipse(n.x,n.y,n.r*Math.min(1,k*1.6),n.r*Math.min(1,k*1.6)*.7,0,0,7);ctx.stroke()}
-  drawFinal();
+  drawFinal();drawGo();
   // 뒤질 것
   for(const c of conts){if(c.car||c.x<vx0||c.x>vx1||c.y<vy0||c.y>vy1)continue;drawCont(c)}
   // 깊이 정렬

@@ -68,6 +68,30 @@ const url=process.argv[2]||'http://127.0.0.1:8795',out=process.argv[3];
       r.equip=await p.evaluate(()=>P.weapon.id==='pipe'&&!P.bag.pipe);
       await p.evaluate(()=>closeInv());return r})();
     ok(Object.values(dragOk).every(Boolean),`${vp.w}: 끌어 놓기 옮기기·합치기·장착 ${JSON.stringify(dragOk)}`);
+    // 눌러서 가기: 땅 → 걸어감, 좀비 → 쫓아가 때림, 상자 → 가서 뒤짐, 막힌 곳 → 가까운 길
+    const scr=(x,y)=>p.evaluate(([x,y])=>({x:(x-cam.x)*zoom+W/2,y:(y-cam.y)*zoom+H/2}),[x,y]);
+    const tapAt=async(pt)=>{if(vp.touch)await p.touchscreen.tap(pt.x,pt.y);else await p.mouse.click(pt.x,pt.y)};
+    const tm={};
+    const g0=await p.evaluate(()=>{Z=[];G.t=10;const sx=P.x/T|0,sy=P.y/T|0;let best=null;
+      for(let j=-6;j<=6;j++)for(let i=-6;i<=6;i++){const tx=sx+i,ty=sy+j;if(!walk(tx,ty)||hyp(i,j)<3)continue;const D=bfs((tx+.5)*T,(ty+.5)*T);const d=D[sy*MW+sx];if(d>2&&d<12&&(!best||d<best.d))best={x:(tx+.5)*T,y:(ty+.5)*T,d}}
+      return best});
+    // 화면 오른쪽 위(버튼·조이스틱 없는 곳)에 오도록 플레이어를 옮겨 놓고 누른다
+    await tapAt(await scr(g0.x,g0.y));await p.waitForTimeout(80);
+    tm.going=await p.evaluate(()=>!!GO);
+    await p.waitForTimeout(3500);
+    tm.arrive=await p.evaluate(([x,y])=>hyp(P.x-x,P.y-y)<16&&!GO,[g0.x,g0.y]);
+    const zt=await p.evaluate(()=>{Z=[];spawnZ(P.x+T*3,P.y,'walker');const z=Z[0];let ok=!hitsSolid(z.x,z.y,z.r);if(!ok){z.x=P.x-T*3;ok=!hitsSolid(z.x,z.y,z.r)}if(!ok){z.x=P.x;z.y=P.y+T*3}z.hp=999;return {x:z.x,y:z.y-14}});
+    await tapAt(await scr(zt.x,zt.y));await p.waitForTimeout(2500);
+    tm.zombie=await p.evaluate(()=>Z.length===1&&Z[0].hp<999);
+    await p.evaluate(()=>{Z=[];GO=null});
+    const ct=await p.evaluate(()=>{for(const c of conts){if(c.empty||c.car)continue;const D=bfs(c.x,c.y);const cx=c.x/T|0,cy=c.y/T|0;
+        for(let j=0;j<=6;j++)for(let i=-6;i<=6;i++){const tx=cx+i,ty=cy+j,d=D[ty*MW+tx];if(!walk(tx,ty)||d<3||d>7)continue;const px=(tx+.5)*T,py=(ty+.5)*T,sx=(c.x-px)*zoom+W/2,sy=(c.y-py+18)*zoom+H/2;
+          if(sx>W*.1&&sx<W*.9&&sy>H*.22&&sy<H*.5){P.x=px;P.y=py;window.__c=c;return {x:c.x,y:c.y}}}}return null});
+    await p.waitForTimeout(100);
+    if(ct){await tapAt(await scr(ct.x,ct.y));await p.waitForTimeout(4000);tm.cont=await p.evaluate(()=>G.state==='loot'||(P.search&&P.search.c===window.__c)||window.__c.loot!=null);await p.evaluate(()=>{if(G.state==='loot')closeLoot();P.search=null})}else tm.cont=false;
+    tm.cancel=await p.evaluate(()=>{const ok=goTo(W*.75,H*.3);keys.KeyD=true;update(.016);keys.KeyD=false;return ok?GO===null:true});
+    await p.evaluate(()=>{GO=null;Z=[];P.x=(HOME_TILE.x+.5)*T;P.y=(HOME_TILE.y+.5)*T});
+    ok(Object.values(tm).every(Boolean),`${vp.w}: 눌러서 가기(땅·좀비·상자·키 취소) ${JSON.stringify(tm)}`);
     // 지도 연결성: 거점에서 모든 뒤질 것까지 갈 수 있다
     ok(await p.evaluate(()=>{const D=bfs((HOME_TILE.x+.5)*T,(HOME_TILE.y+.5)*T);return conts.every(c=>{const tx=c.x/T|0,ty=c.y/T|0;if(c.car){for(const [i,j] of [[-1,0],[1,0],[0,-1],[0,1],[2,0],[0,2],[-1,1],[1,-1]])if(D[(c.car.y+j)*MW+c.car.x+i]>=0)return true;return false}return D[ty*MW+tx]>=0})}),`${vp.w}: 모든 뒤질 것에 갈 수 있다`);
     // 걷기
