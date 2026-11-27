@@ -90,14 +90,14 @@ const url=process.argv[2]||'http://127.0.0.1:8795',out=process.argv[3];
     await p.waitForTimeout(100);
     if(ct){await tapAt(await scr(ct.x,ct.y));await p.waitForTimeout(4000);tm.cont=await p.evaluate(()=>G.state==='loot'||(P.search&&P.search.c===window.__c)||window.__c.loot!=null);await p.evaluate(()=>{if(G.state==='loot')closeLoot();P.search=null})}else tm.cont=false;
     tm.cancel=await p.evaluate(()=>{const ok=goTo(W*.75,H*.3);keys.KeyD=true;update(.016);keys.KeyD=false;return ok?GO===null:true});
-    await p.evaluate(()=>{GO=null;Z=[];P.x=(HOME_TILE.x+.5)*T;P.y=(HOME_TILE.y+.5)*T});
+    await p.evaluate(()=>{GO=null;Z=[];P.x=(HOME_TILE.x+.5)*T;P.y=(HOME_TILE.y+.8)*T});
     ok(Object.values(tm).every(Boolean),`${vp.w}: 눌러서 가기(땅·좀비·상자·키 취소) ${JSON.stringify(tm)}`);
     // 조이스틱 없음·두 번 누르면 달리기
     const dbl=await p.evaluate(()=>({nojoy:getComputedStyle($('#joyzone')).display==='none'}));
     {const g1=await p.evaluate(()=>{Z=[];GO=null;const sx=P.x/T|0,sy=P.y/T|0;for(let r=4;r<12;r++)for(let i=-r;i<=r;i++)for(const j of [-r,r])for(const [u,v] of [[i,j],[j,i]])if(walk(sx+u,sy+v)){const x=(sx+u+.5)*T,y=(sy+v+.5)*T,a=(x-P.x)*zoom+W/2,b=(y-P.y+18)*zoom+H/2,el=document.elementFromPoint(a,b);if(el&&el.id==='cv'&&a>20&&b>20)return {a,b}}return null});
      if(g1){if(vp.touch){await p.touchscreen.tap(g1.a,g1.b);await p.waitForTimeout(90);await p.touchscreen.tap(g1.a,g1.b)}else{await p.mouse.click(g1.a,g1.b);await p.waitForTimeout(90);await p.mouse.click(g1.a,g1.b)}
        await p.waitForTimeout(150);Object.assign(dbl,await p.evaluate(()=>({run:!!(GO&&GO.run&&P.run)})))}else dbl.run=false}
-    await p.evaluate(()=>{GO=null;P.x=(HOME_TILE.x+.5)*T;P.y=(HOME_TILE.y+.5)*T});
+    await p.evaluate(()=>{GO=null;P.x=(HOME_TILE.x+.5)*T;P.y=(HOME_TILE.y+.8)*T});
     ok(Object.values(dbl).every(Boolean),`${vp.w}: 조이스틱 없음·두 번 눌러 달리기 ${JSON.stringify(dbl)}`);
     // 소굴: 들키면 무리가 나온다 → 그날은 조용 → 잠자면 다시 → 저장
     const nest=await p.evaluate(()=>{const r={};spawnDay();const N=nests();r.count=N.length>=2;const n=N[0];
@@ -109,7 +109,17 @@ const url=process.argv[2]||'http://127.0.0.1:8795',out=process.argv[3];
       r.saved=(saveGame(),readSave().G.nest.gangnam[0]===1);Z=[];
       return r});
     ok(Object.values(nest).every(Boolean),`${vp.w}: 소굴 깨어남·무리·하루 한 번·저장 ${JSON.stringify(nest)}`);
-    await p.evaluate(()=>{Z=[];HORDE=[];G.nest={};P.x=(HOME_TILE.x+.5)*T;P.y=(HOME_TILE.y+.5)*T});
+    await p.evaluate(()=>{Z=[];HORDE=[];G.nest={};P.x=(HOME_TILE.x+.5)*T;P.y=(HOME_TILE.y+.8)*T});
+    // 길에서 만들기·작은 짐승 잡기
+    const fld=await p.evaluate(()=>{const r={},ix=n=>RECIPES.findIndex(q=>q.n===n);Z=[];GO=null;
+      const keep=P.bag;P.bag={knife:1,burner:1,butane:1,rat:2};G.gas=0;noises=[];
+      openInv();INVCRAFT=true;renderInv();r.list=$('#modal').textContent.includes('쥐 손질');
+      craft(ix('쥐 손질'),1);craft(ix('쥐 손질'),1);craft(ix('쥐꼬치구이'),1);r.made=P.bag.skewer===1&&noises.length>0;
+      r.base=craftWhy(RECIPES[ix('부대찌개')],true)==='거점에서만';INVCRAFT=false;closeInv();
+      CR=[{k:'rat',x:P.x+30,y:P.y,r:6,ph:0,wt:9,vx:0,vy:0,run:0,fly:0,tired:9}];P.fx=1;P.fy=0;P.atkCd=0;attack();r.rat=P.bag.rat===1&&CR.length===0;
+      G.t=20;CR=[{k:'pigeon',x:P.x+100,y:P.y,r:6,ph:0,wt:9,vx:0,vy:0,run:0,fly:0}];P.run=true;critterTick(.05);r.fly=CR[0].fly>0;P.run=false;
+      spawnCritters();r.spawn=CR.length>5;P.bag=keep;CR=[];return r});
+    ok(Object.values(fld).every(Boolean),`${vp.w}: 길에서 만들기·쥐·비둘기 ${JSON.stringify(fld)}`);
     // 지도 연결성: 거점에서 모든 뒤질 것까지 갈 수 있다
     ok(await p.evaluate(()=>{const D=bfs((HOME_TILE.x+.5)*T,(HOME_TILE.y+.5)*T);return conts.every(c=>{const tx=c.x/T|0,ty=c.y/T|0;if(c.car){for(const [i,j] of [[-1,0],[1,0],[0,-1],[0,1],[2,0],[0,2],[-1,1],[1,-1]])if(D[(c.car.y+j)*MW+c.car.x+i]>=0)return true;return false}return D[ty*MW+tx]>=0})}),`${vp.w}: 모든 뒤질 것에 갈 수 있다`);
     // 걷기
@@ -191,7 +201,22 @@ const url=process.argv[2]||'http://127.0.0.1:8795',out=process.argv[3];
       ok(fit||vp.h<500,`${vp.w}: 거점 탭 ${t} 화면 안${fit?'':'(가로는 스크롤 허용)'}`);
       if(out&&t==='fac')await p.screenshot({path:`${out}/base-${vp.w}.png`});
     }
-    ok(await p.evaluate(()=>{build('barr');build('rain');craft(0);return G.fac.barr===1&&G.fac.rain===1&&G.stash.bandage>=1}),`${vp.w}: 시설·제작`);
+    ok(await p.evaluate(()=>{build('barr');build('rain');craft(RECIPES.findIndex(r=>r.n==='붕대'));return G.fac.barr===1&&G.fac.rain===1&&G.stash.bandage>=1}),`${vp.w}: 시설·제작`);
+    // 음식 제작: 손질(식칼) → 요리(화덕 연료) → 상함 → 길에서 버너 요리 → 쥐·비둘기 잡기
+    const food=await p.evaluate(()=>{const r={},ix=n=>RECIPES.findIndex(q=>q.n===n);
+      G.seen=[];r.hidden=craftList(false).includes('???');
+      Object.assign(G.stash,{rat:2,knife:1,butane:1,spam:1,ramen:1,kimchi:1,water:3,rice:1});delete G.stash.wood;G.gas=0;
+      craft(ix('쥐 손질'));craft(ix('쥐 손질'));r.butcher=G.stash.ratmeat===2&&!G.stash.rat&&G.stash.knife===1;
+      craft(ix('쥐꼬치구이'));r.cook=G.stash.skewer===1&&G.gas===2&&!G.stash.butane;
+      craft(ix('부대찌개'));craft(ix('주먹밥 ×2'));r.dishes=G.stash.budae===1&&G.stash.jumeok===2&&G.gas===0;
+      r.nofuel=craftWhy(RECIPES[ix('비둘기 백숙')],false)!=='';
+      G.tab='craft';G.ccat='food';renderBase();r.tab=$('#modal').textContent.includes('부대찌개');
+      const w=$('#modal .win').getBoundingClientRect(),bd=$('#modal .wbody');r.fit=innerHeight<500||(w.bottom<=innerHeight+1&&bd.scrollHeight<=bd.clientHeight+2);
+      r.best=bestFood({can:1,budae:1,ratmeat:3})==='budae';
+      G.stash.ratmeat=2;delete G.age;const lg=[];spoilTick(lg);r.stamp=G.age.ratmeat===G.day;G.day++;spoilTick(lg);r.rot=!G.stash.ratmeat&&G.stash.rotten>=2&&lg.some(x=>x.includes('쥐고기'));G.day--;
+      return r});
+    ok(Object.values(food).every(Boolean),`${vp.w}: 음식 제작·연료·상함 ${JSON.stringify(food)}`);
+
     // 며칠 지나도 끝나지 않는다(승리는 남산 송신)
     ok(await p.evaluate(()=>{const d0=G.day;for(let i=0;i<7;i++){P.food=P.water=100;P.hp=100;P.inf=0;G.fac.barr=3;sleep()}return G.state!=='over'&&G.day===d0+7}),`${vp.w}: 7일이 지나도 계속된다`);
     // 구역: 강남 → 지하 → 한남대교 → 남산 → 송신 → 구조
