@@ -88,7 +88,7 @@ const url=process.argv[2]||'http://127.0.0.1:8795',out=process.argv[3];
         for(let j=0;j<=6;j++)for(let i=-6;i<=6;i++){const tx=cx+i,ty=cy+j,d=D[ty*MW+tx];if(!walk(tx,ty)||d<3||d>7)continue;const px=(tx+.5)*T,py=(ty+.5)*T,sx=(c.x-px)*zoom+W/2,sy=(c.y-py+18)*zoom+H/2;
           if(sx>W*.1&&sx<W*.9&&sy>H*.22&&sy<H*.5){P.x=px;P.y=py;window.__c=c;return {x:c.x,y:c.y}}}}return null});
     await p.waitForTimeout(100);
-    if(ct){await tapAt(await scr(ct.x,ct.y));await p.waitForTimeout(4000);tm.cont=await p.evaluate(()=>G.state==='loot'||(P.search&&P.search.c===window.__c)||window.__c.loot!=null);await p.evaluate(()=>{if(G.state==='loot')closeLoot();P.search=null})}else tm.cont=false;
+    if(ct){await p.evaluate(()=>{Z=[]});await tapAt(await scr(ct.x,ct.y));await p.waitForTimeout(6000);tm.cont=await p.evaluate(()=>G.state==='loot'||(P.search&&P.search.c===window.__c)||window.__c.loot!=null);await p.evaluate(()=>{if(G.state==='loot')closeLoot();P.search=null})}else tm.cont=false;
     tm.cancel=await p.evaluate(()=>{const ok=goTo(W*.75,H*.3);keys.KeyD=true;update(.016);keys.KeyD=false;return ok?GO===null:true});
     await p.evaluate(()=>{GO=null;Z=[];P.x=(HOME_TILE.x+.5)*T;P.y=(HOME_TILE.y+.8)*T});
     ok(Object.values(tm).every(Boolean),`${vp.w}: 눌러서 가기(땅·좀비·상자·키 취소) ${JSON.stringify(tm)}`);
@@ -110,6 +110,21 @@ const url=process.argv[2]||'http://127.0.0.1:8795',out=process.argv[3];
       return r});
     ok(Object.values(nest).every(Boolean),`${vp.w}: 소굴 깨어남·무리·하루 한 번·저장 ${JSON.stringify(nest)}`);
     await p.evaluate(()=>{Z=[];HORDE=[];G.nest={};P.x=(HOME_TILE.x+.5)*T;P.y=(HOME_TILE.y+.8)*T});
+    // 2·3단계: 바리케이드 5단계·시설·기분 반응
+    const st23=await p.evaluate(()=>{const r={},ix=n=>RECIPES.findIndex(q=>q.n===n);
+      G.fac.barr=0;Object.assign(G.stash,{wood:20,zip:9,nail:9,cardoor:1,scrap:9,fence:9,sandbag:4});
+      for(let i=0;i<5;i++)build('barr');r.barr5=G.fac.barr===5&&!G.stash.sandbag&&!G.stash.cardoor;
+      Object.assign(G.stash,{cloth:3,rat:2});build('smoke');build('ratfarm');r.fac=G.fac.smoke===1&&G.fac.ratfarm===1;
+      G.surv.yuna.st='base';G.surv.malsun.st='base';G.mood={};Object.assign(G.stash,{dogmeat:4,jang:2,water:4,veg:1,knife:1,butane:2});
+      craft(ix('보신탕'));r.dogMood=moodOf('yuna')===50&&moodOf('malsun')===75&&G.stash.bosin===2;
+      Object.assign(G.stash,{spam:1,ramen:1,kimchi:1});craft(ix('부대찌개'));r.budae=moodOf('yuna')===60;
+      G.mood.yuna=10;delete G.stash.dogmeat;G.stash.fish=1;G.stash.ratmeat=1;G.stash.jerky=0;const lg=[];
+      G.stash.can=5;G.stash.water=5;sleep();r.smoked=(G.stash.jerky||0)>=2&&!G.stash.fish;r.farm=G.stash.rat>=1;r.sulk=$('#modal').textContent.includes('기분이 상해');
+      G.surv.yuna.st='lost';G.surv.malsun.st='lost';G.rain=false;
+      r.soju=(P.bag.soju=1,useItem('soju',P.bag),P.bag.bottle===1);delete P.bag.bottle;
+      return r});
+    ok(Object.values(st23).every(Boolean),`${vp.w}: 바리케이드 5단계·훈연기·사육장·동료 기분 ${JSON.stringify(st23)}`);
+    await p.evaluate(()=>{$('#modal').classList.remove('on');G.state='field';Z=[];P.search=null;GO=null;P.x=(HOME_TILE.x+.5)*T;P.y=(HOME_TILE.y+.8)*T});
     // 길에서 만들기·작은 짐승 잡기
     const fld=await p.evaluate(()=>{const r={},ix=n=>RECIPES.findIndex(q=>q.n===n);Z=[];GO=null;
       const keep=P.bag;P.bag={knife:1,burner:1,butane:1,rat:2};G.gas=0;noises=[];
@@ -120,13 +135,31 @@ const url=process.argv[2]||'http://127.0.0.1:8795',out=process.argv[3];
       G.t=20;CR=[{k:'pigeon',x:P.x+100,y:P.y,r:6,ph:0,wt:9,vx:0,vy:0,run:0,fly:0}];P.run=true;critterTick(.05);r.fly=CR[0].fly>0;P.run=false;
       spawnCritters();r.spawn=CR.length>5;P.bag=keep;CR=[];return r});
     ok(Object.values(fld).every(Boolean),`${vp.w}: 길에서 만들기·쥐·비둘기 ${JSON.stringify(fld)}`);
+    // 설치물·들개·낚시·문짝
+    const trp=await p.evaluate(()=>{const r={};Z=[];GO=null;const keep=P.bag;
+      P.bag={plankbar:1,tripwire:1,glass:1,rattrap:1};
+      const sx=P.x/T|0,sy=P.y/T|0;let ok=null;for(const [i,j] of [[1,0],[-1,0],[0,1],[0,-1]])if(walk(sx+i,sy+j)&&walk(sx+2*i,sy+2*j)){ok=[i,j];break}
+      P.fx=ok[0];P.fy=ok[1];placeTrap('plankbar');const t=TRAPS.find(t=>t.k==='plankbar');r.plank=!!t&&solid[t.i]===1;
+      trapTick(30);r.expire=solid[t.i]===0&&!TRAPS.some(t=>t.k==='plankbar');
+      placeTrap('tripwire');const tw=TRAPS.find(t=>t.k==='tripwire');spawnZ(tw.x+5,tw.y,'walker');trapTick(.1);r.trip=tw.ping>0;Z=[];
+      placeTrap('glass');const gl=TRAPS.find(t=>t.k==='glass');spawnZ(gl.x,gl.y,'walker');trapTick(.1);r.glass=Z[0].slowT>0;Z=[];
+      placeTrap('rattrap');const rt=TRAPS.find(t=>t.k==='rattrap');trapTick(61);r.trapCatch=rt.catch>=1;interact();r.trapRat=P.bag.rat>=1;
+      TRAPS=[];
+      spawnZ(P.x+20,P.y,'dog');const dg=Z[0];P.inf=0;for(let i=0;i<30;i++)hurtPlayer(dg);r.dogNoInf=P.inf===0;P.hp=100;
+      dg.hp=0;killZ(dg);r.dogDrop=P.bag.dog===1;Z=[];
+      const d0=G.day;G.day=3;spawnDogs();G.day=d0;r.packs=Z.filter(z=>z.type==='dog').length>=3;Z=[];
+      const car=conts.find(c=>c.car&&!c.car.bus&&!c.car.train&&!c.car.mil);car.empty=true;P.bag={};P.x=car.x;P.y=car.y+30;
+      const was=P.search;interact();r.doorStart=!!(P.search&&P.search.door);if(P.search){P.search.t=9;update(.016)}r.door=P.bag.cardoor===1&&car.car.doorless===1;
+      P.bag=keep;return r});
+    ok(Object.values(trp).every(Boolean),`${vp.w}: 판자 막이·경보줄·깨진 병·쥐덫·들개·문짝 ${JSON.stringify(trp)}`);
+    await p.evaluate(()=>{Z=[];P.search=null;P.x=(HOME_TILE.x+.5)*T;P.y=(HOME_TILE.y+.8)*T});
     // 지도 연결성: 거점에서 모든 뒤질 것까지 갈 수 있다
     ok(await p.evaluate(()=>{const D=bfs((HOME_TILE.x+.5)*T,(HOME_TILE.y+.5)*T);return conts.every(c=>{const tx=c.x/T|0,ty=c.y/T|0;if(c.car){for(const [i,j] of [[-1,0],[1,0],[0,-1],[0,1],[2,0],[0,2],[-1,1],[1,-1]])if(D[(c.car.y+j)*MW+c.car.x+i]>=0)return true;return false}return D[ty*MW+tx]>=0})}),`${vp.w}: 모든 뒤질 것에 갈 수 있다`);
     // 걷기
     await p.evaluate(()=>{keys.KeyS=true});await p.waitForTimeout(600);await p.evaluate(()=>{keys.KeyS=false});
     ok(await p.evaluate(()=>P.y>(HOME_TILE.y+1)*T),`${vp.w}: 이동`);
     // 뒤지기
-    const got=await p.evaluate(async()=>{const c=conts.find(c=>c.type==='mart');P.x=c.x;P.y=c.y+20;Z=Z.filter(z=>hyp(z.x-P.x,z.y-P.y)>400);const before=Object.values(P.bag).reduce((a,b)=>a+b,0)+(P.weapon.id!=='pipe'?1:0);interact();await new Promise(r=>setTimeout(r,1700));const win=G.state==='loot'&&$('#modal').textContent.includes('전부 줍기');const n0=Object.keys(P.bag).length;lootAll();closeLoot();return {s:!!P.search,c:(c.empty||c.loot!==null)&&win&&G.state==='field'&&Object.keys(P.bag).length>=n0}});
+    const got=await p.evaluate(async()=>{const c=conts.find(c=>c.type==='mart');P.x=c.x;P.y=c.y+20;Z=[];const before=Object.values(P.bag).reduce((a,b)=>a+b,0)+(P.weapon.id!=='pipe'?1:0);interact();await new Promise(r=>setTimeout(r,1700));const win=G.state==='loot'&&$('#modal').textContent.includes('전부 줍기');const n0=Object.keys(P.bag).length;lootAll();closeLoot();return {s:!!P.search,c:(c.empty||c.loot!==null)&&win&&G.state==='field'&&Object.keys(P.bag).length>=n0}});
     ok(!got.s&&got.c,`${vp.w}: 편의점 선반 뒤지기 → 전리품 창 → 전부 줍기`);
     // 소리 → 좀비 조사
     ok(await p.evaluate(()=>{spawnZ(P.x+150,P.y);const z=Z[Z.length-1];z.fx=1;z.fy=0;noise(P.x,P.y,200,1);return z.state==='inv'}),`${vp.w}: 소리를 듣고 조사`);
@@ -201,10 +234,10 @@ const url=process.argv[2]||'http://127.0.0.1:8795',out=process.argv[3];
       ok(fit||vp.h<500,`${vp.w}: 거점 탭 ${t} 화면 안${fit?'':'(가로는 스크롤 허용)'}`);
       if(out&&t==='fac')await p.screenshot({path:`${out}/base-${vp.w}.png`});
     }
-    ok(await p.evaluate(()=>{build('barr');build('rain');craft(RECIPES.findIndex(r=>r.n==='붕대'));return G.fac.barr===1&&G.fac.rain===1&&G.stash.bandage>=1}),`${vp.w}: 시설·제작`);
+    ok(await p.evaluate(()=>{Object.assign(G.stash,{zip:2,wood:9,scrap:9,cloth:9});build('barr');build('rain');craft(RECIPES.findIndex(r=>r.n==='붕대'));return G.fac.barr===1&&G.fac.rain===1&&G.stash.bandage>=1}),`${vp.w}: 시설·제작`);
     // 음식 제작: 손질(식칼) → 요리(화덕 연료) → 상함 → 길에서 버너 요리 → 쥐·비둘기 잡기
     const food=await p.evaluate(()=>{const r={},ix=n=>RECIPES.findIndex(q=>q.n===n);
-      G.seen=[];r.hidden=craftList(false).includes('???');
+      G.seen=[];r.hidden=craftList(false).includes('??? 제작법');
       Object.assign(G.stash,{rat:2,knife:1,butane:1,spam:1,ramen:1,kimchi:1,water:3,rice:1});delete G.stash.wood;G.gas=0;
       craft(ix('쥐 손질'));craft(ix('쥐 손질'));r.butcher=G.stash.ratmeat===2&&!G.stash.rat&&G.stash.knife===1;
       craft(ix('쥐꼬치구이'));r.cook=G.stash.skewer===1&&G.gas===2&&!G.stash.butane;
