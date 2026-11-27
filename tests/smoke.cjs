@@ -289,7 +289,7 @@ const url=process.argv[2]||'http://127.0.0.1:8795',out=process.argv[3];
       go('namsan');r.nam=G.zone==='namsan';r.nReach=reach();
       saveGame();r.savedZone=readSave().G.zone==='namsan';
       const tx=links.find(l=>l.to==='final');P.x=(tx.x+.5)*T;P.y=(tx.y+.5)*T;P.bag={};interact();r.need=G.state==='talk'&&$('#modal .pri').disabled;talkEnd();
-      P.bag={parts:5,tape:2};interact();$('#modal .pri').click();r.start=!!G.final&&!P.bag.parts;
+      P.bag=Object.assign({},finalNeed());interact();$('#modal .pri').click();r.start=!!G.final&&!P.bag.parts;
       G.final.p=.995;for(let i=0;i<90&&G.state!=='over';i++){P.hp=100;update(1/30)}
       r.win=G.state==='over'&&$('#screen').textContent.includes('구조 신호')&&!readSave();
       return r});

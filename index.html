@@ -190,6 +190,7 @@ const ITEMS={
   baeksuk:{n:'비둘기 백숙',food:32,water:6,hp:10,ic:'🍲',rot:2,dish:1}, budae:{n:'부대찌개',food:58,water:10,hp:8,ic:'🥘',rot:1,dish:1},
   kjj:{n:'김치찌개',food:42,water:10,ic:'🍛',rot:1,dish:1}, jumeok:{n:'주먹밥',food:24,ic:'🍙',rot:2,dish:1},
   cleanband:{n:'소독 붕대',hp:30,inf:-10,ic:'🧴'}, rotten:{n:'상한 음식',food:10,inf:10,ic:'🤢'},
+  cable:{n:'안테나 케이블',ic:'➰',mat:1},
   zip:{n:'케이블타이',ic:'🪢',mat:1}, nail:{n:'못',ic:'📌',mat:1}, string:{n:'노끈',ic:'🧶',mat:1}, bottle:{n:'빈 병',ic:'🍾',mat:1},
   cardoor:{n:'차 문짝',ic:'🚪',mat:1}, fence:{n:'철망',ic:'🕸',mat:1}, sandbag:{n:'모래주머니',ic:'🟫',mat:1}, jang:{n:'장(고추장·된장)',ic:'🫙',mat:1},
   plankbar:{n:'판자 막이',ic:'🚧',trap:1}, tripwire:{n:'깡통 경보줄',ic:'🔔',trap:1}, glass:{n:'깨진 병 무더기',ic:'💎',trap:1}, rattrap:{n:'쥐덫',ic:'🪤',trap:1},
@@ -848,7 +849,7 @@ function travel(l){
   saveGame();
 }
 /* 마지막: 남산 송신소 */
-function finalNeed(){const y=G.surv&&G.surv.yuna&&G.surv.yuna.st!=='lost';return y?{parts:3,tape:1}:{parts:5,tape:2}}
+function finalNeed(){const y=G.surv&&G.surv.yuna&&G.surv.yuna.st!=='lost';return y?{parts:5,tape:2,battery:2,cable:1}:{parts:8,tape:4,battery:3,cable:1}}
 function finalAsk(l){
   if(G.final)return;
   const need=finalNeed(),ok=Object.entries(need).every(([k,v])=>(P.bag[k]||0)>=v);
@@ -927,7 +928,7 @@ Object.assign(ITEMS,{
   helmet:{n:'오토바이 헬멧',ic:'⛑'}, padding:{n:'두꺼운 패딩',ic:'🧥'}, vest:{n:'방검 조끼',ic:'🦺'},
   backpack:{n:'등산 배낭',ic:'🎒'}, light:{n:'손전등',ic:'🔦'}, battery:{n:'건전지',ic:'🔋'}
 });
-const WT={spear:1.4,molotov:.5,bomb:.8,zip:.05,nail:.1,string:.1,bottle:.3,cardoor:6,fence:2,sandbag:4,jang:.5,plankbar:1,tripwire:.3,glass:.5,rattrap:.4,rod:.6,fish:.4,maeuntang:.7,dog:6,dogmeat:.4,suyuk:.6,bosin:.8,jerky:.1,ssuk:.05,ssukddeok:.2,ssukoint:.1,rat:.3,pigeon:.4,ratmeat:.2,birdmeat:.2,knife:.3,burner:1.2,butane:.3,rice:1,kimchi:.4,spam:.3,soju:.4,skewer:.3,ratramen:.6,baeksuk:.6,budae:.7,kjj:.6,jumeok:.2,cleanband:.05,rotten:.3,can:.4,ramen:.2,veg:.3,water:.5,bandage:.05,anti:.05,fire:.2,scrap:1,cloth:.2,wood:.8,tape:.1,parts:.3,pipe:1.5,bat:1,nailbat:1.3,shovel:2,axe:2.5,helmet:1.2,padding:.9,vest:3,backpack:.8,light:.3,battery:.1};
+const WT={cable:.3,spear:1.4,molotov:.5,bomb:.8,zip:.05,nail:.1,string:.1,bottle:.3,cardoor:6,fence:2,sandbag:4,jang:.5,plankbar:1,tripwire:.3,glass:.5,rattrap:.4,rod:.6,fish:.4,maeuntang:.7,dog:6,dogmeat:.4,suyuk:.6,bosin:.8,jerky:.1,ssuk:.05,ssukddeok:.2,ssukoint:.1,rat:.3,pigeon:.4,ratmeat:.2,birdmeat:.2,knife:.3,burner:1.2,butane:.3,rice:1,kimchi:.4,spam:.3,soju:.4,skewer:.3,ratramen:.6,baeksuk:.6,budae:.7,kjj:.6,jumeok:.2,cleanband:.05,rotten:.3,can:.4,ramen:.2,veg:.3,water:.5,bandage:.05,anti:.05,fire:.2,scrap:1,cloth:.2,wood:.8,tape:.1,parts:.3,pipe:1.5,bat:1,nailbat:1.3,shovel:2,axe:2.5,helmet:1.2,padding:.9,vest:3,backpack:.8,light:.3,battery:.1};
 const GEAR={helmet:{slot:'head',def:.12,bite:0},padding:{slot:'body',def:.08,bite:.3},vest:{slot:'body',def:.25,bite:.15},backpack:{slot:'pack',cap:10},light:{slot:'light'}};
 const SLOTS=[['weapon','무기'],['head','머리'],['body','몸'],['pack','가방'],['light','손전등']];
 LOOT.trunk.t.push(['helmet',.06],['light',.08],['battery',.15]);
@@ -938,6 +939,8 @@ LOOT.hard.t.push(['light',.18],['battery',.3]);LOOT.mart.t.push(['battery',.25])
 LOOT.bus.t.push(['backpack',.06]);
 LOOT.mart.t.push(['spam',.3],['soju',.3],['rice',.15],['butane',.12]);LOOT.fast.t.push(['rice',.3],['kimchi',.35],['knife',.1],['butane',.15],['burner',.06]);
 LOOT.meat.t.push(['rice',.3],['kimchi',.4],['knife',.12],['butane',.2],['burner',.08]);LOOT.villa.t.push(['kimchi',.3],['spam',.2],['knife',.08],['rice',.12]);
+LOOT.mil.t.push(['cable',.4]);LOOT.elec.t.push(['cable',.03],['nail',.15]);LOOT.train.t.push(['cable',.06],['nail',.1]);
+LOOT.office.t.push(['nail',.08]);LOOT.villa.t.push(['nail',.06]);LOOT.trunk.t.push(['nail',.06]);LOOT.bus.t.push(['fence',.06]);LOOT.bin.t.push(['nail',.05]);
 LOOT.bar.t.push(['soju',.5],['butane',.15],['burner',.1],['bottle',.4]);
 LOOT.hard.t.push(['nail',.5],['zip',.35],['string',.3],['fence',.15]);LOOT.elec.t.push(['zip',.4]);LOOT.parcel.t.push(['string',.35],['zip',.15]);LOOT.office.t.push(['zip',.2],['string',.1]);
 LOOT.bin.t.push(['bottle',.35],['ssuk',.12]);LOOT.mil.t.push(['sandbag',.5],['fence',.25],['nail',.2]);LOOT.villa.t.push(['jang',.3],['string',.1]);LOOT.meat.t.push(['jang',.45]);LOOT.fast.t.push(['jang',.25]);LOOT.train.t.push(['string',.15]);LOOT.hard.t.push(['knife',.1],['butane',.12]);LOOT.cafe.t.push(['rice',.1]);LOOT.office.t.push(['battery',.15]);LOOT.parcel.t.push(['battery',.1]);
@@ -947,8 +950,8 @@ const kg=v=>(Math.round(v*10)/10).toFixed(1);
 /* 가방 칸: 가방은 W×H 칸 격자(기본 6×4, 배낭 8×5, 박도윤 동행 +1줄). 물건마다 크기(SZ)와 한 칸 묶음 수(STK).
    P.bag(종류별 개수)이 원본이고 P.lay(칸 배치)는 relayout이 맞춘다: 있던 자리는 그대로, 새로 생긴 묶음은 빈자리에(못 들어가면 회전).
    sortInv('type'|'size'): 정렬(종류별) / 정리(큰 것부터 빈틈없이). 못 들어간 묶음은 x=-1(넘침). */
-const SZ={spear:[1,4],molotov:[1,2],bomb:[1,1],zip:[1,1],nail:[1,1],string:[1,1],bottle:[1,1],cardoor:[2,3],fence:[1,3],sandbag:[2,1],jang:[1,1],plankbar:[1,2],tripwire:[1,1],glass:[1,1],rattrap:[1,1],rod:[1,3],fish:[1,1],maeuntang:[1,1],dog:[2,2],dogmeat:[1,1],suyuk:[1,1],bosin:[1,1],jerky:[1,1],ssuk:[1,1],ssukddeok:[1,1],ssukoint:[1,1],rat:[1,1],pigeon:[1,1],ratmeat:[1,1],birdmeat:[1,1],knife:[1,2],burner:[2,1],butane:[1,1],rice:[1,2],kimchi:[1,1],spam:[1,1],soju:[1,2],skewer:[1,1],ratramen:[1,1],baeksuk:[1,1],budae:[1,1],kjj:[1,1],jumeok:[1,1],cleanband:[1,1],rotten:[1,1],can:[1,1],ramen:[1,1],veg:[1,1],water:[1,2],bandage:[1,1],anti:[1,1],fire:[1,1],scrap:[2,1],cloth:[1,1],wood:[1,3],tape:[1,1],parts:[1,1],pipe:[1,3],bat:[1,3],nailbat:[1,3],shovel:[1,4],axe:[2,3],helmet:[2,2],padding:[2,2],vest:[2,3],backpack:[2,2],light:[1,2],battery:[1,1]};
-const STK={molotov:2,bomb:1,zip:5,nail:6,string:4,bottle:3,fence:2,sandbag:1,jang:3,plankbar:2,tripwire:3,glass:2,rattrap:2,fish:3,maeuntang:2,dogmeat:4,suyuk:2,bosin:2,jerky:5,ssuk:5,ssukddeok:4,ssukoint:4,rat:3,pigeon:2,ratmeat:4,birdmeat:4,butane:2,rice:2,kimchi:3,spam:4,soju:2,skewer:4,ratramen:2,baeksuk:2,budae:2,kjj:2,jumeok:4,cleanband:5,rotten:4,can:4,ramen:4,veg:4,water:2,bandage:5,anti:5,fire:3,scrap:3,cloth:5,wood:2,tape:5,parts:5,battery:6};
+const SZ={cable:[1,1],spear:[1,4],molotov:[1,2],bomb:[1,1],zip:[1,1],nail:[1,1],string:[1,1],bottle:[1,1],cardoor:[2,3],fence:[1,3],sandbag:[2,1],jang:[1,1],plankbar:[1,2],tripwire:[1,1],glass:[1,1],rattrap:[1,1],rod:[1,3],fish:[1,1],maeuntang:[1,1],dog:[2,2],dogmeat:[1,1],suyuk:[1,1],bosin:[1,1],jerky:[1,1],ssuk:[1,1],ssukddeok:[1,1],ssukoint:[1,1],rat:[1,1],pigeon:[1,1],ratmeat:[1,1],birdmeat:[1,1],knife:[1,2],burner:[2,1],butane:[1,1],rice:[1,2],kimchi:[1,1],spam:[1,1],soju:[1,2],skewer:[1,1],ratramen:[1,1],baeksuk:[1,1],budae:[1,1],kjj:[1,1],jumeok:[1,1],cleanband:[1,1],rotten:[1,1],can:[1,1],ramen:[1,1],veg:[1,1],water:[1,2],bandage:[1,1],anti:[1,1],fire:[1,1],scrap:[2,1],cloth:[1,1],wood:[1,3],tape:[1,1],parts:[1,1],pipe:[1,3],bat:[1,3],nailbat:[1,3],shovel:[1,4],axe:[2,3],helmet:[2,2],padding:[2,2],vest:[2,3],backpack:[2,2],light:[1,2],battery:[1,1]};
+const STK={cable:2,molotov:2,bomb:1,zip:5,nail:6,string:4,bottle:3,fence:2,sandbag:1,jang:3,plankbar:2,tripwire:3,glass:2,rattrap:2,fish:3,maeuntang:2,dogmeat:4,suyuk:2,bosin:2,jerky:5,ssuk:5,ssukddeok:4,ssukoint:4,rat:3,pigeon:2,ratmeat:4,birdmeat:4,butane:2,rice:2,kimchi:3,spam:4,soju:2,skewer:4,ratramen:2,baeksuk:2,budae:2,kjj:2,jumeok:4,cleanband:5,rotten:4,can:4,ramen:4,veg:4,water:2,bandage:5,anti:5,fire:3,scrap:3,cloth:5,wood:2,tape:5,parts:5,battery:6};
 const CAT=id=>WEAP[id]?0:GEAR[id]?1:(ITEMS[id].food||ITEMS[id].water)?2:(ITEMS[id].hp||ITEMS[id].inf||id==='battery'||id==='fire')?3:4;
 function gridWH(){const big=P.eq&&P.eq.pack,extra=(ALLY&&ALLY.id==='doyun')||(G&&G.state==='base'&&G.follow==='doyun')?1:0;return [big?8:6,(big?5:4)+extra]}
 function occ(lay,W,H){const g=new Uint8Array(W*H);for(const s of lay)if(s.x>=0)for(let j=0;j<s.h;j++)for(let i=0;i<s.w;i++)g[(s.y+j)*W+s.x+i]=1;return g}
@@ -1540,12 +1543,14 @@ function finishSearch(){
   if(sr.fish){if(R()<.65){if(canCarry('fish')){addTo(P.bag,'fish');seenMark();toast('붕어를 낚았다!','green')}else toast('가방이 꽉 찼다','red')}else toast('입질이 없다… 다시 던져 보자');return}
   if(sr.door){if(canCarry('cardoor')){addTo(P.bag,'cardoor');sr.door.car.doorless=1;seenMark();toast('차 문짝을 뜯었다 (바리케이드 재료)','green')}else toast('문짝(2×3칸)이 가방에 안 들어간다','red');noise(P.x,P.y,140,1);return}
   const c=sr.c;
-  if(!c.loot)c.loot=rollLoot(c.type);
+  if(!c.loot)c.loot=rollLoot(c.type,c.tx!==undefined?FLOOR_LOOT:1);
   if(c.car&&c.car.alarm&&!c.car.fired){c.car.fired=true;alarm(c.car)}
   if(!c.loot.length){c.empty=true;toast(`${LOOT[c.type].n}: 쓸 만한 게 없다`);return}
   openLoot(c);
 }
-function rollLoot(k){const o=[];for(const [i,p] of LOOT[k].t)if(R()<p)o.push(i);return o}
+const FLOOR_LOOT=.5,REFILL=.15;
+const RARE=new Set(['fence','sandbag','cable','axe','vest','helmet','backpack','knife','burner','light','padding','shovel']);
+function rollLoot(k,mult=1){const o=[];for(const [i,p] of LOOT[k].t)if(R()<p*(RARE.has(i)?1:mult))o.push(i);return o}
 const THROWS=['fire','molotov','bomb'];
 const throwKind=()=>P.throwSel&&P.bag[P.throwSel]?P.throwSel:THROWS.find(k=>P.bag[k])||P.throwSel||'fire';
 function throwFire(){
@@ -1604,7 +1609,7 @@ function update(dt){
     move(P,ux*spd*dt,uy*spd*dt);P.ph+=dt*spd*.12;
     P.stepT-=dt;if(P.stepT<=0){P.stepT=run?.35:.6;noise(P.x,P.y,run?150:42,run?1:0,'255,255,255')}
   }
-  P.food=Math.max(0,P.food-.06*dt);P.water=Math.max(0,P.water-(run?.16:.09)*(raining()?.5:1)*dt);
+  P.food=Math.max(0,P.food-.085*dt);P.water=Math.max(0,P.water-(run?.19:.11)*(raining()?.5:1)*dt);
   if(P.food<=0||P.water<=0)P.hp-=.6*dt;
   P.atkCd-=dt;P.hurt-=dt;P.swing-=dt;
   // 길찾기
@@ -1875,9 +1880,9 @@ function sleep(){
   if(G.fac.ratfarm){addTo(G.stash,'rat');log.push('쥐 사육장: 쥐 +1');if(R()<.15){P.inf=Math.min(100,P.inf+3);log.push('<span class="no">사육장 냄새에 잔기침이 난다 (감염 +3)</span>')}}
   crewMorning(fed,log);
   G.day++;G.t=0;G.warned=G.warn0=0;G.spT=0;P.lightManual=false;G.rain=R()<.3;
-  for(const c of conts)if(c.empty&&R()<.3){c.empty=false;c.loot=null}
-  for(const id in ZC)if(id!==G.zone)for(const c of ZC[id].conts)if(c.empty&&R()<.3){c.empty=false;c.loot=null}
-  for(const k in G.floors){const f=G.floors[k];f.Z=null;if(f.conts)for(const c of f.conts)if(c.empty&&R()<.3){c.empty=false;c.loot=null}}
+  for(const c of conts)if(c.empty&&R()<REFILL){c.empty=false;c.loot=null}
+  for(const id in ZC)if(id!==G.zone)for(const c of ZC[id].conts)if(c.empty&&R()<REFILL){c.empty=false;c.loot=null}
+  for(const k in G.floors){const f=G.floors[k];f.Z=null;if(f.conts)for(const c of f.conts)if(c.empty&&R()<REFILL){c.empty=false;c.loot=null}}
   for(const car of cars)car.fired=false;
   noises=[];thrown=[];alarms=[];fx=[];
   spawnDay();
@@ -1948,7 +1953,7 @@ function titleScreen(){
 }
 /* 게임 방법: 처음 시작할 때 한 번, 처음 화면·일시정지에서 다시 */
 const HELP=[
- ['🎯 목표','남산 송신소에서 <b>구조 신호</b>를 보내면 끝난다.<br>강남역 지하철 출구(▼)로 내려가 북쪽 선로를 따라 <b>한남대교</b>를 건너고, <b>남산</b> 정상 송신소에서 부품 5·테이프 2로 송신기를 고친 뒤 90초 버틴다.<br>화면 왼쪽 <b>목표</b> 칸이 지금 할 일을 알려 준다.'],
+ ['🎯 목표','남산 송신소에서 <b>구조 신호</b>를 보내면 끝난다.<br>강남역 지하철 출구(▼)로 내려가 북쪽 선로를 따라 <b>한남대교</b>를 건너고, <b>남산</b> 정상 송신소에서 부품 8·테이프 4·배터리 3·<b>안테나 케이블</b> 1(한남대교 군 보급 상자에서 나온다)로 송신기를 고친 뒤 90초 버틴다.<br>화면 왼쪽 <b>목표</b> 칸이 지금 할 일을 알려 준다.'],
  ['☀ 하루','하루는 06시에 시작해 <b>17시쯤 해가 진다</b>. 밤엔 좀비가 늘고 손전등 없이는 앞이 안 보인다.<br>해 지기 전 <b>★ 거점(청운 오피스텔)</b> 앞에서 [E/✋]로 들어가 잠을 잔다. 잠들 때 배고픔·갈증이 25씩 준다.'],
  ['❤ 살아남기','<b>체력</b> 0 또는 <b>감염</b> 100이면 끝. 물리면 감염이 오르고 항생제로 낮춘다.<br>배고픔·갈증이 0이면 체력이 깎인다. 아이템 줄 1~5로 바로 먹고 마시고 치료한다.'],
  ['🔊 소리와 좀비','걷기·달리기·공격·뒤지기 모두 <b>소리</b>를 낸다. 소리를 들은 좀비가 확인하러 온다.<br>눈치채지 못한 좀비를 치면 기습 피해. <b>비명꾼</b>은 다른 좀비를 부르니 먼저 잡자. 깜박이는 차 트렁크는 경보가 울린다.<br><b style="color:#ff6a5a">⚠ 소굴</b>(빨간 원) 안에서 좀비에게 들키거나 뛰면 좀비 무리가 쏟아져 나온다. 살금살금 지나가거나, 각오하고 싸우면 무리는 좋은 물건을 떨어뜨린다. 폭죽(5)을 던져 좀비를 끌어낼 수 있다.'],
@@ -2003,12 +2008,12 @@ let hudT=0;
 /* 목표 칸: 지금 할 일(최종 목표 단계) + 오늘 할 일 + 생존자. 누르면 전체 목록 */
 let GOALOPEN=(()=>{try{return localStorage.getItem('seoul-survivor-goal')==='1'}catch(e){return false}})();
 function goalSteps(){
-  const all=(k)=>(P.bag[k]||0)+(G.stash[k]||0),need=finalNeed(),pa=all('parts'),ta=all('tape');
+  const all=(k)=>(P.bag[k]||0)+(G.stash[k]||0),need=finalNeed(),have=Object.entries(need).map(([k,v])=>[k,Math.min(all(k),v),v]),pa=all('parts'),ta=all('tape');
   return [
     {t:'강남역 지하철 출구(▼)로 지하에 내려가기',d:!!G.seenSub},
     {t:'북쪽 선로 끝 → 한남대교 건너기',d:!!G.seenBri},
     {t:'한남대교 북단 → 남산 정상 송신소 찾기',d:!!G.seenNam},
-    {t:`송신기 재료 모으기 — 부품 ${Math.min(pa,need.parts)}/${need.parts} · 테이프 ${Math.min(ta,need.tape)}/${need.tape}`,d:pa>=need.parts&&ta>=need.tape},
+    {t:`송신기 재료 — ${have.map(([k,h,v])=>`${ITEMS[k].n.replace('안테나 ','')} ${h}/${v}`).join(' · ')}${all('cable')?'':' (케이블은 한남대교 군 보급 상자)'}`,d:have.every(([k,h,v])=>h>=v)},
     {t:'송신소 📡에서 송신기 고치고 90초 버티기',d:false}];
 }
 function goalToday(){
