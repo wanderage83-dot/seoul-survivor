@@ -92,6 +92,24 @@ const url=process.argv[2]||'http://127.0.0.1:8795',out=process.argv[3];
     tm.cancel=await p.evaluate(()=>{const ok=goTo(W*.75,H*.3);keys.KeyD=true;update(.016);keys.KeyD=false;return ok?GO===null:true});
     await p.evaluate(()=>{GO=null;Z=[];P.x=(HOME_TILE.x+.5)*T;P.y=(HOME_TILE.y+.5)*T});
     ok(Object.values(tm).every(Boolean),`${vp.w}: 눌러서 가기(땅·좀비·상자·키 취소) ${JSON.stringify(tm)}`);
+    // 조이스틱 없음·두 번 누르면 달리기
+    const dbl=await p.evaluate(()=>({nojoy:getComputedStyle($('#joyzone')).display==='none'}));
+    {const g1=await p.evaluate(()=>{Z=[];GO=null;const sx=P.x/T|0,sy=P.y/T|0;for(let r=4;r<12;r++)for(let i=-r;i<=r;i++)for(const j of [-r,r])for(const [u,v] of [[i,j],[j,i]])if(walk(sx+u,sy+v)){const x=(sx+u+.5)*T,y=(sy+v+.5)*T,a=(x-P.x)*zoom+W/2,b=(y-P.y+18)*zoom+H/2,el=document.elementFromPoint(a,b);if(el&&el.id==='cv'&&a>20&&b>20)return {a,b}}return null});
+     if(g1){if(vp.touch){await p.touchscreen.tap(g1.a,g1.b);await p.waitForTimeout(90);await p.touchscreen.tap(g1.a,g1.b)}else{await p.mouse.click(g1.a,g1.b);await p.waitForTimeout(90);await p.mouse.click(g1.a,g1.b)}
+       await p.waitForTimeout(150);Object.assign(dbl,await p.evaluate(()=>({run:!!(GO&&GO.run&&P.run)})))}else dbl.run=false}
+    await p.evaluate(()=>{GO=null;P.x=(HOME_TILE.x+.5)*T;P.y=(HOME_TILE.y+.5)*T});
+    ok(Object.values(dbl).every(Boolean),`${vp.w}: 조이스틱 없음·두 번 눌러 달리기 ${JSON.stringify(dbl)}`);
+    // 소굴: 들키면 무리가 나온다 → 그날은 조용 → 잠자면 다시 → 저장
+    const nest=await p.evaluate(()=>{const r={};spawnDay();const N=nests();r.count=N.length>=2;const n=N[0];
+      r.guards=Z.filter(z=>hyp(z.x-n.x,z.y-n.y)<4*T).length>=2;
+      Z=[];P.x=n.sp[0][0];P.y=n.sp[0][1];P.run=false;nestT=0;nestTick(.016);r.quiet=!nestFired(0);
+      spawnZ(n.x+T*2,n.y,'walker');Z[0].sees=true;nestT=0;nestTick(.016);r.woke=nestFired(0)&&HORDE.length===1;
+      for(let i=0;i<60;i++)nestTick(.1);r.horde=Z.filter(z=>z.horde&&z.state==='chase').length>=6;
+      const c=Z.length;Z=[];spawnZ(n.x,n.y,'walker');Z[0].sees=true;nestT=0;nestTick(.016);r.once=HORDE.length===0;
+      r.saved=(saveGame(),readSave().G.nest.gangnam[0]===1);Z=[];
+      return r});
+    ok(Object.values(nest).every(Boolean),`${vp.w}: 소굴 깨어남·무리·하루 한 번·저장 ${JSON.stringify(nest)}`);
+    await p.evaluate(()=>{Z=[];HORDE=[];G.nest={};P.x=(HOME_TILE.x+.5)*T;P.y=(HOME_TILE.y+.5)*T});
     // 지도 연결성: 거점에서 모든 뒤질 것까지 갈 수 있다
     ok(await p.evaluate(()=>{const D=bfs((HOME_TILE.x+.5)*T,(HOME_TILE.y+.5)*T);return conts.every(c=>{const tx=c.x/T|0,ty=c.y/T|0;if(c.car){for(const [i,j] of [[-1,0],[1,0],[0,-1],[0,1],[2,0],[0,2],[-1,1],[1,-1]])if(D[(c.car.y+j)*MW+c.car.x+i]>=0)return true;return false}return D[ty*MW+tx]>=0})}),`${vp.w}: 모든 뒤질 것에 갈 수 있다`);
     // 걷기
