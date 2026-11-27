@@ -33,6 +33,30 @@ const url=process.argv[2]||'http://127.0.0.1:8795',out=process.argv[3];
       closeInv();r.back=G.state==='field';P.eq.body=null;P.eq.pack=null;P.bag={};P.lightOn=false;
       return r});
     ok(Object.values(inv).every(Boolean),`${vp.w}: 가방 칸·정렬·정리·장비·손전등 ${JSON.stringify(inv)}`);
+    // 끌어 놓기: 옮기기·합치기·장비 칸에 놓아 장착
+    const dragOk=await (async()=>{
+      await p.evaluate(()=>{P.bag={pipe:1,can:5};P.lay=[];sortInv('type');P.lay.forEach(t=>{if(t.id==='can'&&t.n===1){}});openInv()});
+      const box=async sel=>{const b=await p.locator(sel).first().boundingBox();return {x:b.x+b.width/2,y:b.y+b.height/2}};
+      const drag=async (from,toX,toY)=>{await p.mouse.move(from.x,from.y);await p.mouse.down();await p.mouse.move(from.x+10,from.y+10,{steps:3});await p.mouse.move(toX,toY,{steps:6});await p.mouse.up();await p.waitForTimeout(80)};
+      const r={};
+      // 통조림 묶음(1개짜리)을 오른쪽 아래 빈칸으로
+      const cans=await p.evaluate(()=>P.lay.map((t,i)=>[t.id,t.n,i,t.x,t.y]));
+      const small=cans.find(c=>c[0]==='can'&&c[1]===1);
+      const gc=await p.locator('.bag .gc').last().boundingBox();
+      await drag(await box(`.bag .gi[data-i="${small[2]}"]`),gc.x+gc.width/2,gc.y+gc.height/2);
+      r.moved=await p.evaluate(()=>{const [W,H]=gridWH();return P.lay.some(t=>t.id==='can'&&t.x===W-1&&t.y===H-1)&&P.bag.can===5});
+      // 그 1개를 4개 묶음 위로 → 합침(묶음 최대 4라 4+1은 못 합침 → 하나 빼서 테스트)
+      await p.evaluate(()=>{P.bag.can=4;relayout();renderInv()});
+      const st=await p.evaluate(()=>P.lay.map((t,i)=>[t.id,t.n,i]).filter(c=>c[0]==='can'));
+      if(st.length===2){const a=st.find(c=>c[1]<4)||st[1],b=st.find(c=>c!==a);const tb=await box(`.bag .gi[data-i="${b[2]}"]`);await drag(await box(`.bag .gi[data-i="${a[2]}"]`),tb.x,tb.y)}
+      r.merged=await p.evaluate(()=>P.lay.filter(t=>t.id==='can').length===1&&P.bag.can===4);
+      // 쇠파이프를 무기 칸으로 → 장착
+      await p.evaluate(()=>{P.weapon={id:'fist',dur:Infinity};renderInv()});
+      const pi=await p.evaluate(()=>P.lay.findIndex(t=>t.id==='pipe'));
+      const ws=await box('.slot[data-s="weapon"]');await drag(await box(`.bag .gi[data-i="${pi}"]`),ws.x,ws.y);
+      r.equip=await p.evaluate(()=>P.weapon.id==='pipe'&&!P.bag.pipe);
+      await p.evaluate(()=>closeInv());return r})();
+    ok(Object.values(dragOk).every(Boolean),`${vp.w}: 끌어 놓기 옮기기·합치기·장착 ${JSON.stringify(dragOk)}`);
     // 지도 연결성: 거점에서 모든 뒤질 것까지 갈 수 있다
     ok(await p.evaluate(()=>{const D=bfs((HOME_TILE.x+.5)*T,(HOME_TILE.y+.5)*T);return conts.every(c=>{const tx=c.x/T|0,ty=c.y/T|0;if(c.car){for(const [i,j] of [[-1,0],[1,0],[0,-1],[0,1],[2,0],[0,2],[-1,1],[1,-1]])if(D[(c.car.y+j)*MW+c.car.x+i]>=0)return true;return false}return D[ty*MW+tx]>=0})}),`${vp.w}: 모든 뒤질 것에 갈 수 있다`);
     // 걷기

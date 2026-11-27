@@ -77,6 +77,9 @@ body.touch #btns{display:grid;position:fixed;right:14px;bottom:calc(18px + env(s
 .bag .gi{position:relative;z-index:1;margin:0;border:1px solid rgba(255,255,255,.22);background:#2a2c38;border-radius:3px;display:flex;align-items:center;justify-content:center;padding:0}
 .bag .gi.sel{border-color:var(--accent);background:#3d3622}
 .bag .gi em{position:absolute;right:2px;bottom:0;font-style:normal;font-size:10px;font-weight:700;color:var(--accent)}
+.bag{touch-action:none;position:relative}.bag .gi{cursor:grab;touch-action:none}
+.bag .prev{z-index:2;border:2px dashed #7fe08a;background:rgba(127,224,138,.18);border-radius:3px;pointer-events:none}.bag .prev.bad{border-color:#e0574d;background:rgba(224,87,77,.2)}
+.gi.ghost{position:fixed;z-index:60;pointer-events:none;opacity:.92;background:#2a2c38;border-radius:3px;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 6px 18px rgba(0,0,0,.6);border:1px solid #ffd76a}.gi.ghost.ok{border:2px solid #7fe08a}
 .sortbtn{display:flex;flex-direction:column;gap:4px}.sortbtn button{border:1px solid var(--line);background:rgba(255,255,255,.08);border-radius:6px;padding:6px 8px;font-size:12px}
 @media (min-width:600px){.bag{--c:40px}}
 @media (max-width:380px){.bag{--c:30px}}
@@ -954,14 +957,14 @@ function closeInv(){$('#modal').classList.remove('on');if(INVBACK==='base'){G.st
 function slotItem(s){return s==='weapon'?(P.weapon.id==='fist'?null:P.weapon.id):P.eq[s]}
 function renderInv(){
   const m=$('#modal'),sel=INVSEL;
-  const slots=SLOTS.map(([s,n])=>{const id=slotItem(s);return `<button class="ic slot${sel&&sel.slot===s?' sel':''}" onclick="INVSEL={slot:'${s}'};renderInv()"><span>${id?pimg(id,28):'·'}</span><small>${id?ITEMS[id].n:n}</small>${s==='weapon'&&id?`<i class="dur" style="width:${P.weapon.dur/WEAP[id].dur*100}%"></i>`:''}${s==='light'&&id?`<em>${Math.round(P.bat)}%</em>`:''}</button>`}).join('');
+  const slots=SLOTS.map(([s,n])=>{const id=slotItem(s);return `<button class="ic slot${sel&&sel.slot===s?' sel':''}" data-s="${s}" onclick="INVSEL={slot:'${s}'};renderInv()"><span>${id?pimg(id,28):'·'}</span><small>${id?ITEMS[id].n:n}</small>${s==='weapon'&&id?`<i class="dur" style="width:${P.weapon.dur/WEAP[id].dur*100}%"></i>`:''}${s==='light'&&id?`<em>${Math.round(P.bat)}%</em>`:''}</button>`}).join('');
   const lay=relayout(),[GW,GH]=gridWH(),ov=lay.filter(t=>t.x<0);
   const bg=Array.from({length:GW*GH},(_,i)=>`<i class="gc" style="grid-column:${i%GW+1};grid-row:${(i/GW|0)+1}"></i>`).join('');
-  const its=lay.filter(t=>t.x>=0).map(t=>`<button class="gi${sel&&sel.id===t.id?' sel':''}" style="grid-column:${t.x+1}/span ${t.w};grid-row:${t.y+1}/span ${t.h}" onclick="INVSEL={id:'${t.id}'};renderInv()" title="${ITEMS[t.id].n}">${pimg(t.id,Math.min(t.w,t.h)>1?44:26)}${t.n>1?`<em>${t.n}</em>`:''}</button>`).join('');
+  const its=lay.map((t,i)=>[t,i]).filter(([t])=>t.x>=0).map(([t,i])=>`<button class="gi${sel&&sel.id===t.id?' sel':''}" data-i="${i}" style="grid-column:${t.x+1}/span ${t.w};grid-row:${t.y+1}/span ${t.h}" title="${ITEMS[t.id].n}">${pimg(t.id,Math.min(t.w,t.h)>1?44:26)}${t.n>1?`<em>${t.n}</em>`:''}</button>`).join('');
   let det='<p class="desc">아이템이나 장비 칸을 누르면 자세히 보인다.</p>';
   if(sel&&sel.id&&P.bag[sel.id]){
     const id=sel.id,it=ITEMS[id],n=P.bag[id],usable=it.food||it.water||it.hp||it.inf||id==='battery'||id==='fire',eq=WEAP[id]||GEAR[id];
-    det=`<div class="desc"><b>${it.n}</b> ×${n} · ${(SZ[id]||[1,1]).join('×')}칸(묶음 ${STK[id]||1}개) · ${kg(WT[id]||.5)}kg<br>${itemDesc(id)}</div><div class="acts">${usable?`<button onclick="invUse('${id}')">${id==='fire'?'던지기':id==='battery'?'손전등에 넣기':'사용'}</button>`:''}${eq?`<button onclick="invEquip('${id}')">장착</button>`:''}<button onclick="invDrop('${id}',1)">1개 버리기</button>${n>1?`<button onclick="invDrop('${id}',${n})">모두 버리기</button>`:''}</div>`;
+    det=`<div class="desc"><b>${it.n}</b> ×${n} · ${(SZ[id]||[1,1]).join('×')}칸(묶음 ${STK[id]||1}개) · ${kg(WT[id]||.5)}kg<br>${itemDesc(id)}</div><div class="acts">${usable?`<button onclick="invUse('${id}')">${id==='fire'?'던지기':id==='battery'?'손전등에 넣기':'사용'}</button>`:''}${eq?`<button onclick="invEquip('${id}')">장착</button>`:''}${(SZ[id]||[1,1])[0]!==(SZ[id]||[1,1])[1]?`<button onclick="invRotate('${id}')">돌리기</button>`:''}<button onclick="invDrop('${id}',1)">1개 버리기</button>${n>1?`<button onclick="invDrop('${id}',${n})">모두 버리기</button>`:''}</div>`;
   }else if(sel&&sel.slot){
     const id=slotItem(sel.slot);
     det=id?`<div class="desc"><b>${ITEMS[id].ic} ${ITEMS[id].n}</b> (장착 중)${sel.slot==='weapon'?` · 내구 ${P.weapon.dur}/${WEAP[id].dur}`:''}${sel.slot==='light'?` · 건전지 ${Math.round(P.bat)}% · ${P.lightOn?'켜짐':'꺼짐'}`:''}<br>${itemDesc(id)}</div><div class="acts">${sel.slot==='light'?`<button onclick="toggleLight();renderInv()">${P.lightOn?'끄기':'켜기'}</button>`:''}<button onclick="invUnequip('${sel.slot}')">해제</button></div>`
@@ -971,6 +974,50 @@ function renderInv(){
   <div class="wbody"><div class="slots">${slots}</div>${wbar()}<div class="bagwrap"><div class="bag" style="--gw:${GW};--gh:${GH}">${bg}${its}</div><div class="sortbtn"><button onclick="sortInv('type');renderInv()" title="종류별로 모으기">정렬</button><button onclick="sortInv('size');renderInv()" title="큰 것부터 빈틈없이">정리</button></div></div>${ov.length?`<p class="desc no">⚠ 가방에 안 들어간 물건: ${ov.map(t=>ITEMS[t.id].n).join(', ')} — 「정리」하거나 버리자</p>`:''}${det}</div>
   <div class="wfoot"><button onclick="closeInv()">닫기</button></div></div>`;
   m.classList.add('on');
+  const bag=m.querySelector('.bag');if(bag){bag.onpointerdown=bagDown;bag.onpointermove=bagMove;bag.onpointerup=bagUp;bag.onpointercancel=bagCancel}
+}
+/* 끌어 놓기: 칸 그림을 끌어 빈자리로 옮기기·같은 물건에 합치기·장비 칸에 놓아 장착. 끄는 중 R로 돌리기 */
+let DRAG=null;
+function cellAt(bag,cx,cy,w,h){const gc=bag.querySelector('.gc').getBoundingClientRect(),r=bag.getBoundingClientRect(),c=gc.width+2;
+  return [Math.round((cx-r.left-4)/c-w/2),Math.round((cy-r.top-4)/c-h/2)]}
+function dragCheck(){
+  const d=DRAG,[W,H]=gridWH(),others=P.lay.filter((t,i)=>i!==d.i&&t.x>=0);
+  d.mode=null;const under=document.elementFromPoint(d.px,d.py);
+  const slot=under&&under.closest('.slot');if(slot){const id=d.s.id,s=slot.dataset.s;if((s==='weapon'&&WEAP[id])||(GEAR[id]&&GEAR[id].slot===s)){d.mode='equip';return}}
+  const gi=under&&under.closest('.gi');if(gi&&+gi.dataset.i!==d.i){const t=P.lay[+gi.dataset.i];if(t&&t.id===d.s.id&&t.n<(STK[t.id]||1)){d.mode='merge';d.t=t;return}}
+  const [x,y]=cellAt(d.bag,d.px,d.py,d.w,d.h);d.tx=x;d.ty=y;
+  if(x<0||y<0||x+d.w>W||y+d.h>H){d.mode='bad';return}
+  const g=occ(others,W,H);for(let j=0;j<d.h;j++)for(let i=0;i<d.w;i++)if(g[(y+j)*W+x+i]){d.mode='bad';return}
+  d.mode='place';
+}
+function dragDraw(){
+  const d=DRAG;if(!d.ghost)return;const c=d.bag.querySelector('.gc').getBoundingClientRect().width+2;
+  Object.assign(d.ghost.style,{left:(d.px-d.w*c/2)+'px',top:(d.py-d.h*c/2)+'px',width:(d.w*c-2)+'px',height:(d.h*c-2)+'px'});
+  if(!d.prev){d.prev=document.createElement('i');d.prev.className='prev';d.bag.appendChild(d.prev)}
+  const p=d.prev;if(d.mode==='place'||d.mode==='bad'){p.style.display='';p.style.gridColumn=`${Math.max(0,d.tx)+1}/span ${d.w}`;p.style.gridRow=`${Math.max(0,d.ty)+1}/span ${d.h}`;p.classList.toggle('bad',d.mode==='bad')}else p.style.display='none';
+  d.ghost.classList.toggle('ok',d.mode==='merge'||d.mode==='equip');
+}
+function bagDown(e){const el=e.target.closest('.gi');if(!el)return;e.preventDefault();const i=+el.dataset.i,s=P.lay[i];
+  DRAG={i,s,el,bag:el.closest('.bag'),x0:e.clientX,y0:e.clientY,px:e.clientX,py:e.clientY,moved:false,w:s.w,h:s.h};try{el.setPointerCapture(e.pointerId)}catch(_){}}
+function bagMove(e){const d=DRAG;if(!d)return;d.px=e.clientX;d.py=e.clientY;
+  if(!d.moved&&Math.hypot(d.px-d.x0,d.py-d.y0)>6){d.moved=true;d.ghost=d.el.cloneNode(true);d.ghost.classList.add('ghost');document.body.appendChild(d.ghost);d.el.style.opacity='.3'}
+  if(d.moved){dragCheck();dragDraw()}}
+function bagUp(e){const d=DRAG;if(!d)return;DRAG=null;if(d.ghost)d.ghost.remove();if(d.prev)d.prev.remove();
+  if(!d.moved){INVSEL={id:d.s.id};renderInv();return}
+  d.px=e.clientX;d.py=e.clientY;DRAG=d;dragCheck();DRAG=null;
+  if(d.mode==='equip'){invEquip(d.s.id);return}
+  if(d.mode==='merge'){const room=(STK[d.s.id]||1)-d.t.n,mv=Math.min(room,d.s.n);d.t.n+=mv;d.s.n-=mv;if(d.s.n<=0)P.lay.splice(P.lay.indexOf(d.s),1);P.lay=[d.t,...P.lay.filter(t=>t!==d.t)];toast('합쳤다','green','merge')}
+  else if(d.mode==='place'){d.s.x=d.tx;d.s.y=d.ty;d.s.w=d.w;d.s.h=d.h}
+  else toast('거기엔 놓을 수 없다','red','noplace');
+  INVSEL={id:d.s.id};renderInv();
+}
+function bagCancel(){const d=DRAG;DRAG=null;if(d){if(d.ghost)d.ghost.remove();if(d.prev)d.prev.remove();renderInv()}}
+function dragRotate(){const d=DRAG;if(!d||!d.moved)return;[d.w,d.h]=[d.h,d.w];dragCheck();dragDraw()}
+function invRotate(id){
+  const lay=relayout(),i=lay.findIndex(t=>t.id===id&&t.x>=0);if(i<0)return;const s=lay[i],[W,H]=gridWH(),g=occ(lay.filter(t=>t!==s),W,H);
+  const fits=(x,y,w,h)=>{if(x<0||y<0||x+w>W||y+h>H)return false;for(let j=0;j<h;j++)for(let k=0;k<w;k++)if(g[(y+j)*W+x+k])return false;return true};
+  const w=s.h,h=s.w;let p=fits(s.x,s.y,w,h)?[s.x,s.y]:spot(g,W,H,w,h);
+  if(!p){toast('돌릴 자리가 없다','red','norot');return}s.x=p[0];s.y=p[1];s.w=w;s.h=h;renderInv();
 }
 function invUse(id){
   if(id==='fire'){closeInv();throwFire();return}
@@ -1099,6 +1146,7 @@ addEventListener('keydown',e=>{
   if(G.state==='talk'&&e.code==='Escape'){talkEnd();return}
   if(G.state==='loot'&&(e.code==='Escape'||e.code==='KeyE')){closeLoot();return}
   if(G.state==='loot'&&e.code==='KeyR'){lootAll();return}
+  if(G.state==='inv'&&e.code==='KeyR'){if(DRAG)dragRotate();else if(INVSEL&&INVSEL.id)invRotate(INVSEL.id);return}
   if(G.state==='inv'&&(e.code==='Escape'||e.code==='Tab'||e.code==='KeyI')){e.preventDefault();closeInv();return}
   if(e.code==='Escape'){if(G.state==='field')pause();else if(G.state==='pause')resume();return}
   if(G.state!=='field')return;
