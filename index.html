@@ -2196,7 +2196,9 @@ function build3D(){
 function hashF(a,b){const s=Math.sin(a*127.1+b*311.7)*43758.5453;return s-Math.floor(s)}
 // 사람·좀비: 기존 그리기 함수를 64×88 캔버스에 그려 세운 그림으로
 function v3sprite(i){let s=V3.sprites[i];if(s)return s;const c=document.createElement('canvas');c.width=64;c.height=88;const t=new V3.T.CanvasTexture(c);t.magFilter=V3.T.NearestFilter;t.minFilter=V3.T.NearestFilter;t.colorSpace=V3.T.SRGBColorSpace;
-  const sp=new V3.T.Sprite(new V3.T.SpriteMaterial({map:t,transparent:true,alphaTest:.05,fog:true}));sp.center.set(.5,14/88);sp.scale.set(64/T,88/T,1);V3.scene.add(sp);s={c,x:c.getContext('2d'),t,sp};V3.sprites[i]=s;return s}
+  // 똑바로 선 판(위로 기울지 않게): 카메라 쪽(+z)을 보고, 비스듬히 내려다볼 때 납작해지는 만큼 세로로 늘린다. 발이 바닥에 닿게 아래를 기준으로
+  const geo=new V3.T.PlaneGeometry(1,1);geo.translate(0,.5-14/88,0);
+  const sp=new V3.T.Mesh(geo,new V3.T.MeshBasicMaterial({map:t,transparent:true,alphaTest:.05,fog:true,side:V3.T.DoubleSide,depthWrite:true}));sp.scale.set(64/T,88/T/Math.cos(.95),1);sp.renderOrder=2;V3.scene.add(sp);s={c,x:c.getContext('2d'),t,sp};V3.sprites[i]=s;return s}
 function render3D(){
   const T3=V3.T,day=G.t<NIGHT,nightK=clamp((G.t-NIGHT+25)/30,0,1),inDark=!!(G.area||ZONES[G.zone].dark),nk=inDark?Math.max(G.area&&G.t<NIGHT-20?.55:.88,nightK):nightK;
   if(V3.cv.style.display==='none')V3.cv.style.display='block';
