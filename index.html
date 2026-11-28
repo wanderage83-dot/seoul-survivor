@@ -103,6 +103,7 @@ body.touch #btns{display:grid;position:fixed;right:14px;bottom:calc(18px + env(s
 .steps i{grid-row:span 2;font-style:normal;width:22px;height:22px;border-radius:50%;background:#7a5a1c;color:#fff3d4;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px}.steps b{font-size:13px}.steps span{font-size:11px;color:var(--dim)}
 .help h2{margin:6px 0 8px;font-size:20px}.help .hb{text-align:left;color:var(--ink);font-size:13px;line-height:1.7;min-height:120px}
 .dots{display:flex;gap:6px;justify-content:center;margin:6px 0 10px}.dots i{width:8px;height:8px;border-radius:50%;background:#444;cursor:pointer}.dots i.on{background:var(--accent)}
+#fade{position:fixed;inset:0;background:#05060a;opacity:0;pointer-events:none;z-index:30;display:flex;align-items:center;justify-content:center}#fade.on{pointer-events:auto}#fade b{color:#e8d9b0;font-size:18px;letter-spacing:.08em;opacity:.0;transition:opacity .2s}#fade.on b{opacity:1}
 #goal{pointer-events:auto;align-self:flex-start;max-width:min(330px,92vw);background:rgba(8,8,12,.84);border:1px solid var(--line);border-radius:9px;padding:5px 9px;font-size:11px;line-height:1.55;cursor:pointer}
 #goal .gh{font-weight:700;color:var(--accent);font-size:12px}#goal .gh small{color:var(--dim);font-weight:400}
 #goal .done{color:#7d9a74;text-decoration:line-through}#goal .cur{color:#fff}#goal div:not(.gh):not(.cur):not(.done){color:var(--dim)}#goal .td{color:#ffd79a;margin-top:2px}#goal .sv{color:#9fd7ff}
@@ -1498,6 +1499,30 @@ function spawnDogs(){
 }
 const nearWater=()=>{if(G.area)return false;const cx=P.x/T|0,cy=P.y/T|0;for(let j=-1;j<=1;j++)for(let i=-1;i<=1;i++)if(tile[(cy+j)*MW+cx+i]===11)return true;return false};
 
+/* ───────── 들어가고 나가는 연출 ─────────
+   건물 문: 문 쪽으로 걸어 들어가며 흐려짐(.4초) → 화면이 어두워지며 이름(.25초) → 바꾸기 → 밝아짐(.35초).
+   거리로 나올 때는 문에서 한 걸음 걸어 나온다(out). 계단은 짧게(quick). 동작 줄이기 설정·테스트(window.__noAnim)면 바로 바꾼다. */
+let TR=null;var ANIM_ON=!window.__noAnim&&!matchMedia('(prefers-reduced-motion: reduce)').matches;
+function doTrans(o){
+  if(!ANIM_ON||!G){o.fn();return}
+  if(TR)return;P.search=null;GO=null;
+  TR=Object.assign({ph:o.walk?'walk':'dark',t:0,x0:P.x,y0:P.y},o);G.state='trans';
+  if(o.walk){const dx=o.walk.x-P.x,dy=o.walk.y-P.y,l=hyp(dx,dy)||1;P.fx=dx/l;P.fy=dy/l}
+  const f=$('#fade');f.querySelector('b').textContent=o.label||'';
+}
+function transTick(dt){
+  const t=TR,f=$('#fade'),D={walk:.42,dark:t.quick?.16:.26,hold:t.quick?.12:.32,light:t.quick?.22:.38,outw:.38};
+  t.t+=dt;const k=Math.min(1,t.t/D[t.ph]);
+  if(t.ph==='walk'){P.x=lerp(t.x0,t.walk.x,k);P.y=lerp(t.y0,t.walk.y,k);P.ph+=dt*11;P.fadeA=1-k*.85;f.style.opacity=k*.35}
+  else if(t.ph==='dark'){f.style.opacity=.35+k*.65;f.classList.add('on')}
+  else if(t.ph==='hold'){f.style.opacity=1}
+  else if(t.ph==='light'){f.style.opacity=1-k;if(t.out&&!t.ow){t.ow={x:P.x,y:P.y}}if(t.out){P.fadeA=.25+k*.75;P.y=t.ow.y-10+k*10;P.ph+=dt*11}}
+  if(k>=1){const nx={walk:'dark',dark:'hold',hold:'light',light:null}[t.ph];
+    if(t.ph==='hold'){P.fadeA=t.out?.25:null;t.fn();if(G.state==='trans'||G.state==='field')G.state='trans';flowD=null}
+    if(!nx){P.fadeA=null;f.style.opacity=0;f.classList.remove('on');TR=null;if(G.state==='trans')G.state='field';last=performance.now();return}
+    t.ph=nx;t.t=0}
+}
+
 /* ───────── 플레이어 행동 ───────── */
 const bagCount=()=>Object.values(P.bag).reduce((a,b)=>a+b,0);
 function addTo(s,id,n=1){s[id]=(s[id]||0)+n}
@@ -1535,8 +1560,8 @@ function nearCont(){let b=null,bd=1e9;for(const c of conts){const d=hyp(c.x-P.x,
 function interact(){
   if(P.search)return;
   const tr=nearTrap();if(tr){checkTrap(tr);return}
-  if(G.area){const n=nearNpc();if(n){talkTo(n);return}const t=inTile();if(t){useStairs(t);return}}
-  else{if(nearHome()){openBase();return}const l=nearLink();if(l){travel(l);return}const db=doorBuilding();if(db){enterFloor(db,1,false);return}}
+  if(G.area){const n=nearNpc();if(n){talkTo(n);return}const t=inTile();if(t){const {b,f}=G.area;doTrans({label:t===10?'거리':`${b.name} ${t===8?f+1:f-1}층`,out:t===10,quick:t!==10,fn:()=>useStairs(t)});return}}
+  else{if(nearHome()){openBase();return}const l=nearLink();if(l){if(l.to==='final')travel(l);else doTrans({label:ZONES[l.to].n,fn:()=>travel(l)});return}const db=doorBuilding();if(db){doTrans({walk:{x:(db.door.x+.5)*T,y:db.door.y*T+2},label:`${db.name} 1층`,fn:()=>enterFloor(db,1,false)});return}}
   const c=nearCont();
   if(!c&&nearWater()){if(!P.bag.rod){toast('낚싯대가 있으면 붕어를 낚을 수 있다');return}P.search={fish:1,t:0,dur:6};noise(P.x,P.y,25,0);return}
   if(!c)return;
@@ -2727,7 +2752,7 @@ function zombieMarks(z,top){const x=z.x,y=z.y;top=top||52;
 }
 function drawPlayer(){
   const x=P.x,y=P.y,moving=keys.KeyW||keys.KeyA||keys.KeyS||keys.KeyD||keys.ArrowUp||keys.ArrowDown||keys.ArrowLeft||keys.ArrowRight||joy.on||!!GO;
-  if(ART.player){ctx.strokeStyle='rgba(120,220,255,.55)';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(x,y+2,14,6,0,0,7);ctx.stroke();drawSheet('player',P,moving,P.hurt>0?.6:undefined);if(P.swing>0){const fa=Math.atan2(P.fy,P.fx),w=WEAP[P.weapon.id];ctx.strokeStyle='rgba(255,255,255,.4)';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(x,y-14,w.reach,w.reach*.7,0,fa-1,fa+1);ctx.stroke()}return}
+  if(ART.player){ctx.strokeStyle='rgba(120,220,255,.55)';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(x,y+2,14,6,0,0,7);ctx.stroke();drawSheet('player',P,moving||G.state==='trans',P.fadeA!=null?P.fadeA:P.hurt>0?.6:undefined);if(P.swing>0){const fa=Math.atan2(P.fy,P.fx),w=WEAP[P.weapon.id];ctx.strokeStyle='rgba(255,255,255,.4)';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(x,y-14,w.reach,w.reach*.7,0,fa-1,fa+1);ctx.stroke()}return}
   const bob=moving?Math.sin(P.ph)*2:0,up=P.fy<-.35;
   ctx.fillStyle='rgba(0,0,0,.32)';ctx.beginPath();ctx.ellipse(x,y+2,10,4,0,0,7);ctx.fill();
   ctx.fillStyle='#2c3440';ctx.fillRect(x-5,y-7+Math.max(0,bob),4,9);ctx.fillRect(x+1,y-7+Math.max(0,-bob),4,9);
@@ -2760,7 +2785,7 @@ function loop(now){
   // 창을 닫을 때 last를 performance.now()로 맞추면 이번 프레임 시각보다 늦을 수 있어 음수가 되지 않게 막는다
   const dt=clamp((now-last)/1000,0,.05);last=Math.max(last,now);
   try{
-    if(G&&G.state==='field')update(dt);
+    if(G&&G.state==='field')update(dt);else if(G&&G.state==='trans'&&TR)transTick(dt);
     render();
     hudT-=dt;if(G&&hudT<=0){hudT=.1;hud()}
   }catch(e){console.error(e)}
@@ -2769,5 +2794,6 @@ titleScreen();
 load3D();
 requestAnimationFrame(loop);
 </script>
+<div id="fade"><b></b></div>
 </body>
 </html>

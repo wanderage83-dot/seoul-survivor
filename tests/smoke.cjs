@@ -8,6 +8,7 @@ const url=process.argv[2]||'http://127.0.0.1:8795',out=process.argv[3];
     const ctx=await b.newContext({viewport:{width:vp.w,height:vp.h},hasTouch:!!vp.touch,isMobile:!!vp.touch});
     const p=await ctx.newPage();const errs=[];
     p.on('pageerror',e=>errs.push(e.message));p.on('console',m=>{if(m.type()==='error')errs.push(m.text())});
+    await p.addInitScript(()=>{window.__noAnim=true});
     await p.addInitScript(()=>{try{if(!sessionStorage.getItem('t3d')){localStorage.setItem('seoul-survivor-view2','2d');sessionStorage.setItem('t3d','1')}}catch(e){}});
     await p.goto(url);await p.waitForTimeout(300);
     ok(await p.isVisible('#screen.on'),`${vp.w}: 시작 화면`);
@@ -183,6 +184,13 @@ const url=process.argv[2]||'http://127.0.0.1:8795',out=process.argv[3];
     ok(await p.evaluate(()=>{Z=[];let bad=0;for(const b of buildings.filter(b=>b.floors).slice(0,25)){P.x=(b.door.x+.5)*T;P.y=(b.door.y+.5)*T;interact();if(!G.area)continue;let ex=-1;for(let i=0;i<MW*MH;i++)if(tile[i]===10)ex=i;P.x=(ex%MW+.5)*T;P.y=((ex/MW|0)+.5)*T;interact();if(G.area||hitsSolid(P.x,P.y,P.r))bad++}P.x=(HOME_TILE.x+.5)*T;P.y=(HOME_TILE.y+.8)*T;return bad===0}),`${vp.w}: 건물에서 나오면 빈자리에 선다`);
     // 화면 확대 단추: 1배 → 2배 → 3배 → 1배
     ok(await p.evaluate(()=>{const z0=zoom,r=[];for(let i=0;i<3;i++){$('#zoombtn').click();r.push([ZL,Math.round(zoom/z0*10)/10])}const ok=r[0][0]===2&&r[0][1]===2&&r[1][0]===3&&r[1][1]===3&&r[2][0]===1&&r[2][1]===1&&$('#zoombtn').textContent==='🔍1×';return ok}),`${vp.w}: 화면 확대 단추`);
+    // 건물에 들어가는 연출: 문 쪽으로 걸어가 흐려짐 → 어두워짐 → 안 → 밝아짐, 나올 때는 걸어 나옴
+    {const st=await p.evaluate(()=>{ANIM_ON=true;Z=[];const b=buildings.find(b=>b.floors&&!b.home);P.x=(b.door.x+.5)*T;P.y=(b.door.y+.5)*T;const y0=P.y;interact();return {trans:G.state==='trans',walk:TR&&TR.ph==='walk'}});
+     await p.waitForTimeout(250);const mid=await p.evaluate(()=>({fade:P.fadeA!=null&&P.fadeA<1}));
+     await p.waitForTimeout(1500);const end=await p.evaluate(()=>({inside:!!G.area,field:G.state==='field',clear:+$('#fade').style.opacity===0&&P.fadeA==null}));
+     await p.evaluate(()=>{let ex=-1;for(let i=0;i<MW*MH;i++)if(tile[i]===10)ex=i;P.x=(ex%MW+.5)*T;P.y=((ex/MW|0)+.5)*T;interact()});await p.waitForTimeout(1500);
+     const out=await p.evaluate(()=>{const r={out:!G.area,field:G.state==='field'};ANIM_ON=false;P.x=(HOME_TILE.x+.5)*T;P.y=(HOME_TILE.y+.8)*T;return r});
+     const all=Object.assign({},st,mid,end,{out:out.out,field2:out.field});ok(Object.values(all).every(Boolean),`${vp.w}: 건물 들어가고 나오는 연출 ${JSON.stringify(all)}`)}
     // 지도 연결성: 거점에서 모든 뒤질 것까지 갈 수 있다
     ok(await p.evaluate(()=>{const D=bfs((HOME_TILE.x+.5)*T,(HOME_TILE.y+.5)*T);return conts.every(c=>{const tx=c.x/T|0,ty=c.y/T|0;if(c.car){for(const [i,j] of [[-1,0],[1,0],[0,-1],[0,1],[2,0],[0,2],[-1,1],[1,-1]])if(D[(c.car.y+j)*MW+c.car.x+i]>=0)return true;return false}return D[ty*MW+tx]>=0})}),`${vp.w}: 모든 뒤질 것에 갈 수 있다`);
     // 걷기
