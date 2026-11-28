@@ -20,7 +20,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 #info{text-align:right;font-size:12px;background:rgba(0,0,0,.5);padding:5px 9px;border-radius:9px;line-height:1.5;pointer-events:auto}
 #clock{font-size:15px;font-weight:700;color:var(--accent)}
 #clock.night{color:#8fa8ff}
-#pausebtn,#mapbtn,#invbtn,#lightbtn{border:1px solid var(--line);background:rgba(255,255,255,.06);border-radius:6px;padding:1px 7px;font-size:11px;margin-top:2px}
+#pausebtn,#mapbtn,#zoombtn,#invbtn,#lightbtn{border:1px solid var(--line);background:rgba(255,255,255,.06);border-radius:6px;padding:1px 7px;font-size:11px;margin-top:2px}
 #toasts{position:fixed;top:calc(112px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none;z-index:6;width:92vw}
 .toast{background:rgba(0,0,0,.72);padding:5px 12px;border-radius:14px;font-size:13px;animation:tf 2.8s forwards;text-align:center}
 .toast.red{color:#ffb2aa;border:1px solid rgba(224,87,77,.5)}
@@ -148,7 +148,7 @@ body:not(.ingame) #hud,body:not(.ingame) #btns,body:not(.ingame) #joyzone,body:n
       <span>💧 갈증</span><div class="bar"><i id="bWater" style="background:#5aa7e0"></i></div><b id="nWater"></b>
       <span>☣ 감염</span><div class="bar"><i id="bInf" style="background:#9be05a"></i></div><b id="nInf"></b>
     </div>
-    <div id="info"><div id="clock"></div><div id="bagn"></div><canvas id="mini" title="전체 지도"></canvas><div class="ib"><button id="mapbtn">🗺 지도</button><button id="pausebtn">Ⅱ</button></div></div>
+    <div id="info"><div id="clock"></div><div id="bagn"></div><canvas id="mini" title="전체 지도"></canvas><div class="ib"><button id="zoombtn" title="화면 확대: 누를 때마다 1배 → 2배 → 3배 → 1배">🔍1×</button><button id="mapbtn">🗺 지도</button><button id="pausebtn">Ⅱ</button></div></div>
   </div>
   <div id="hotbar"></div>
   <div id="goal"></div>
@@ -1236,6 +1236,7 @@ addEventListener('keydown',e=>{
   else if(e.code==='KeyF'||e.code==='KeyQ')throwFire();
   else if(/^Digit[1-5]$/.test(e.code))quickUse(+e.code.slice(5)-1);
   else if(e.code==='KeyM')openMap();
+  else if(e.code==='KeyZ')zoomCycle();
   else if(e.code==='KeyL')toggleLight();
   else if(e.code==='Tab'||e.code==='KeyI'){e.preventDefault();openInv()}
 });
@@ -1273,6 +1274,7 @@ document.getElementById('cv').addEventListener('pointerup',tapEnd);document.getE
 document.getElementById('cv').addEventListener('contextmenu',e=>e.preventDefault());
 $('#pausebtn').addEventListener('click',()=>{if(G&&G.state==='field')pause()});
 $('#mapbtn').addEventListener('click',()=>openMap());
+$('#zoombtn').addEventListener('click',()=>zoomCycle());
 $('#mini').addEventListener('click',()=>openMap());
 $('#goal').addEventListener('click',()=>{GOALOPEN=!GOALOPEN;try{localStorage.setItem('seoul-survivor-goal',GOALOPEN?'1':'0')}catch(e){}if(G)goalHud()});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&G){saveGame();if(G.state==='field')pause()}});
@@ -2105,8 +2107,10 @@ function pixelBlit(){
 }
 const dk=document.createElement('canvas'),dctx=dk.getContext('2d');
 let W,H,DPR,zoom,cam={x:0,y:0};
-function resize(){DPR=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=W*DPR;cv.height=H*DPR;dk.width=cv.width;dk.height=cv.height;zoom=clamp(Math.min(W,H)/(T*11),.8,1.7);if(typeof V3!=='undefined'&&V3)resize3D()}
-addEventListener('resize',resize);resize();
+var ZL=(()=>{try{return +localStorage.getItem('seoul-survivor-zoom')||1}catch(e){return 1}})();if(![1,2,3].includes(ZL))ZL=1;
+function zoomCycle(){ZL=ZL>=3?1:ZL+1;try{localStorage.setItem('seoul-survivor-zoom',ZL)}catch(e){}resize();const b=$('#zoombtn');if(b)b.textContent='🔍'+ZL+'×';toast(ZL===1?'원래 크기':`${ZL}배 확대`,'','zoom')}
+function resize(){DPR=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=W*DPR;cv.height=H*DPR;dk.width=cv.width;dk.height=cv.height;zoom=clamp(Math.min(W,H)/(T*11),.8,1.7)*ZL;if(typeof V3!=='undefined'&&V3)resize3D()}
+addEventListener('resize',resize);resize();$('#zoombtn').textContent='🔍'+ZL+'×';
 function toWorld(sx,sy){if(v3on())return v3world(sx,sy);return{x:(sx-W/2)/zoom+cam.x,y:(sy-H/2)/zoom+cam.y}}
 function toScreen(x,y){if(v3on())return v3proj(x,y,0);return{x:(x-cam.x)*zoom+W/2,y:(y-cam.y)*zoom+H/2}}
 function onScreen(x,y){const s=toScreen(x,y);return s.x>-40&&s.y>-40&&s.x<W+40&&s.y<H+40}
@@ -2279,7 +2283,7 @@ function render3D(){
   const key=goKey()+'|'+G.seed+'|'+buildings.length+'|'+cars.length;if(V3.key!==key){V3.key=key;build3D()}
   cam.x=P.x;cam.y=P.y;
   // 카메라: 남쪽 위에서 내려다봄
-  const tx=P.x/T,tz=P.y/T,dist=clamp(Math.max(11/(.536*W/H),30),24,52)*(V3.zoomK||1),pit=.95,sx=(R()-.5)*shake*.02,sy=(R()-.5)*shake*.02;
+  const tx=P.x/T,tz=P.y/T,dist=clamp(Math.max(11/(.536*W/H),30),24,52)/ZL,pit=.95,sx=(R()-.5)*shake*.02,sy=(R()-.5)*shake*.02;
   V3.cam.position.set(tx+sx,Math.sin(pit)*dist,tz+Math.cos(pit)*dist+sy);V3.cam.lookAt(tx,0,tz-.6);V3.cam.updateMatrixWorld();
   // 빛
   const dayK=1-nk;V3.sun.intensity=1.7*dayK;V3.hemi.intensity=.25+.75*dayK;V3.hemi.color.setHex(nk>.5?0x6070a0:0xdfeaff);

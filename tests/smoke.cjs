@@ -181,6 +181,8 @@ const url=process.argv[2]||'http://127.0.0.1:8795',out=process.argv[3];
     }
     // 건물에서 나오면 막힌 곳에 서지 않는다
     ok(await p.evaluate(()=>{Z=[];let bad=0;for(const b of buildings.filter(b=>b.floors).slice(0,25)){P.x=(b.door.x+.5)*T;P.y=(b.door.y+.5)*T;interact();if(!G.area)continue;let ex=-1;for(let i=0;i<MW*MH;i++)if(tile[i]===10)ex=i;P.x=(ex%MW+.5)*T;P.y=((ex/MW|0)+.5)*T;interact();if(G.area||hitsSolid(P.x,P.y,P.r))bad++}P.x=(HOME_TILE.x+.5)*T;P.y=(HOME_TILE.y+.8)*T;return bad===0}),`${vp.w}: 건물에서 나오면 빈자리에 선다`);
+    // 화면 확대 단추: 1배 → 2배 → 3배 → 1배
+    ok(await p.evaluate(()=>{const z0=zoom,r=[];for(let i=0;i<3;i++){$('#zoombtn').click();r.push([ZL,Math.round(zoom/z0*10)/10])}const ok=r[0][0]===2&&r[0][1]===2&&r[1][0]===3&&r[1][1]===3&&r[2][0]===1&&r[2][1]===1&&$('#zoombtn').textContent==='🔍1×';return ok}),`${vp.w}: 화면 확대 단추`);
     // 지도 연결성: 거점에서 모든 뒤질 것까지 갈 수 있다
     ok(await p.evaluate(()=>{const D=bfs((HOME_TILE.x+.5)*T,(HOME_TILE.y+.5)*T);return conts.every(c=>{const tx=c.x/T|0,ty=c.y/T|0;if(c.car){for(const [i,j] of [[-1,0],[1,0],[0,-1],[0,1],[2,0],[0,2],[-1,1],[1,-1]])if(D[(c.car.y+j)*MW+c.car.x+i]>=0)return true;return false}return D[ty*MW+tx]>=0})}),`${vp.w}: 모든 뒤질 것에 갈 수 있다`);
     // 걷기
