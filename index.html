@@ -1723,7 +1723,7 @@ function updateZ(z,dt,night){
 }
 
 /* ───────── 거점 ───────── */
-function pause(){G.state='pause';showScreen(`<div class="win big"><h1>일시정지</h1><p>${G.day}일차 · ${clockText()}</p><div class="keys">이동 WASD·방향키 · 달리기 Shift · 지도 M<br>공격 Space·클릭 · 뒤지기/거점 E<br>폭죽 F·우클릭 · 아이템 1~5</div><button class="btn pri" onclick="resume()">계속하기</button><button class="btn" onclick="openHelp(false)">게임 방법</button><button class="btn" onclick="toggleLook()">화면: ${LOOK_NAME[VLOOK]} (바꾸기)</button><button class="btn" onclick="set3D(!V3.want);pause()">3D 보기: ${V3.want?'켜짐':'꺼짐'} (시험)</button><button class="btn" onclick="saveGame();titleScreen()">저장하고 처음 화면으로</button></div>`)}
+function pause(){G.state='pause';showScreen(`<div class="win big"><h1>일시정지</h1><p>${G.day}일차 · ${clockText()}</p><div class="keys">이동 WASD·방향키 · 달리기 Shift · 지도 M<br>공격 Space·클릭 · 뒤지기/거점 E<br>폭죽 F·우클릭 · 아이템 1~5</div><button class="btn pri" onclick="resume()">계속하기</button><button class="btn" onclick="openHelp(false)">게임 방법</button><button class="btn" onclick="toggleLook()">화면: ${LOOK_NAME[VLOOK]} (바꾸기)</button><button class="btn" onclick="set3D(!V3.want);pause()">화면: ${V3.want?'3D':'2D'} (바꾸기)</button><button class="btn" onclick="saveGame();titleScreen()">저장하고 처음 화면으로</button></div>`)}
 function resume(){G.state='field';closeScreen();last=performance.now()}
 function openBase(){
   G.state='base';P.search=null;ALLY=null;
@@ -2116,8 +2116,9 @@ const TCOL=[['#2f3236','#2c2f33','#33363a'],['#6d6961','#68645c','#726e66'],['#3
    three.js(r160, CDN)로 길·건물·차·나무를 3D로 세우고, 사람·좀비는 기존 2D 그림을 작은 캔버스에 그려 세운 그림(스프라이트)으로 넣는다.
    바닥은 기존 2D 바닥 그리기(drawGround·핏자국·소리 원·목표·덫·짐승·던진 것)를 캔버스에 그려 3D 바닥에 입힌다.
    작게 그린 뒤 각지게 키워 도트 느낌. 판정·좀비·저장은 2D 그대로이고 그림만 바뀐다. 못 불러오면 2D로 돌아간다.
-   켜기: 주소 ?view=3d 또는 일시정지 「3D 보기」(localStorage seoul-survivor-view). */
-var V3={want:/[?&]view=3d/.test(location.search)||(()=>{try{return localStorage.getItem('seoul-survivor-view')==='3d'}catch(e){return false}})(),ready:false,loading:false,key:null,sprites:[],tap:null};
+   기본으로 켜짐. 주소 ?view=2d 또는 일시정지 「화면: 3D/2D」로 끈다(localStorage seoul-survivor-view2). */
+// 기본은 3D(2026-11-28). 주소 ?view=2d 또는 일시정지에서 끄면 2D. 예전 키(seoul-survivor-view)는 무시하고 새 키로 기억
+var V3={want:/[?&]view=3d/.test(location.search)||!/[?&]view=2d/.test(location.search)&&(()=>{try{return localStorage.getItem('seoul-survivor-view2')!=='2d'}catch(e){return true}})(),ready:false,loading:false,key:null,sprites:[],tap:null};
 const V3_URL='https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js';
 const v3on=()=>V3.want&&V3.ready&&!!G;
 function load3D(){
@@ -2125,7 +2126,7 @@ function load3D(){
   const s=document.createElement('script');s.src=V3_URL;s.onload=()=>{try{init3D()}catch(e){console.warn(e);fail3D()}};s.onerror=fail3D;document.head.appendChild(s);
 }
 function fail3D(){V3.loading=false;V3.want=false;toast('3D 그림을 불러오지 못해 2D로 봅니다','red','v3')}
-function set3D(on){V3.want=on;try{localStorage.setItem('seoul-survivor-view',on?'3d':'2d')}catch(e){}if(on)load3D();else if(V3.cv)V3.cv.style.display='none';if(V3.cv&&on&&V3.ready)V3.cv.style.display='block'}
+function set3D(on){V3.want=on;try{localStorage.setItem('seoul-survivor-view2',on?'3d':'2d')}catch(e){}if(on)load3D();else if(V3.cv)V3.cv.style.display='none';if(V3.cv&&on&&V3.ready)V3.cv.style.display='block'}
 function init3D(){
   const T3=THREE;V3.T=T3;
   const r=new T3.WebGLRenderer({antialias:false,powerPreference:'high-performance'});r.shadowMap.enabled=true;r.shadowMap.type=T3.PCFSoftShadowMap;r.outputColorSpace=T3.SRGBColorSpace;

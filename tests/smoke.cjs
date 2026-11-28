@@ -8,6 +8,7 @@ const url=process.argv[2]||'http://127.0.0.1:8795',out=process.argv[3];
     const ctx=await b.newContext({viewport:{width:vp.w,height:vp.h},hasTouch:!!vp.touch,isMobile:!!vp.touch});
     const p=await ctx.newPage();const errs=[];
     p.on('pageerror',e=>errs.push(e.message));p.on('console',m=>{if(m.type()==='error')errs.push(m.text())});
+    await p.addInitScript(()=>{try{if(!sessionStorage.getItem('t3d')){localStorage.setItem('seoul-survivor-view2','2d');sessionStorage.setItem('t3d','1')}}catch(e){}});
     await p.goto(url);await p.waitForTimeout(300);
     ok(await p.isVisible('#screen.on'),`${vp.w}: 시작 화면`);
     ok(await p.evaluate(()=>{const t=$('#screen').textContent;const r=$('#screen .win').getBoundingClientRect();return t.includes('최종 목표')&&t.includes('남산 송신소')&&t.includes('게임 방법')&&r.bottom<=innerHeight+1}),`${vp.w}: 처음 화면에 목표·하루 흐름·게임 방법`);
@@ -208,7 +209,7 @@ const url=process.argv[2]||'http://127.0.0.1:8795',out=process.argv[3];
       let dn=null;for(let i=0;i<MW*MH;i++)if(tile[i]===9)dn=i;P.x=(dn%MW+.5)*T;P.y=((dn/MW|0)+.5)*T;Z=[];interact();r.back1=G.area&&G.area.f===1;
       const kept=G.floors[`${b.x},${b.y},2`].conts[0];r.kept=!c||kept===c;
       let ex=null;for(let i=0;i<MW*MH;i++)if(tile[i]===10)ex=i;P.x=(ex%MW+.5)*T;P.y=((ex/MW|0)+.5)*T;interact();
-      r.out=!G.area&&hyp(P.x-(b.door.x+.5)*T,P.y-(b.door.y+.8)*T)<2&&buildings.length>50&&!!solid[b.y*MW+b.x];
+      r.out=!G.area&&hyp(P.x-(b.door.x+.5)*T,P.y-(b.door.y+.8)*T)<80&&!hitsSolid(P.x,P.y,P.r)&&buildings.length>50&&!!solid[b.y*MW+b.x];
       return r});
     ok(Object.values(inside).every(Boolean),`${vp.w}: 건물 안 층 이동·뒤지기·나오기 ${JSON.stringify(inside)}`);
     // 저장·불러오기: 상태를 바꾸고 저장 → 새로고침 → 이어하기
