@@ -22,7 +22,11 @@ def pop(f,name):
 for c in CHARS:
     # art/raw/..<이름>_tall.png 이 있으면 8등신(키 큰) 시트로: 논리 키 48px, 칸을 세로로 길게
     ft=raw(c+'_tall');f=raw(c)
-    if ft:sheet(pop(ft,c),3,4,48,tight=True).save(f'{OUT}/{c}.png');done.append(c+'(8등신)')
+    if ft:
+        tall = sheet(pop(ft,c),3,4,48,tight=True)
+        indexed = tall.quantize(colors=128,method=Image.Quantize.FASTOCTREE,dither=Image.Dither.NONE)
+        indexed.save(f'{OUT}/{c}.png',optimize=True)
+        done.append(c+'(8등신)')
     elif f:sheet(pop(f,c),3,4,24).save(f'{OUT}/{c}.png');done.append(c)
 for sh,items in PROPS.items():
     f=raw(sh)
